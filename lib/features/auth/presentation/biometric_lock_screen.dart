@@ -20,12 +20,7 @@ import 'cubit/auth_cubit.dart';
 import 'login_screen.dart';
 import 'widgets/mosaed_buttons.dart';
 
-enum _BiometricLockState {
-  ready,
-  needsSetup,
-  notLoggedIn,
-  deviceUnavailable,
-}
+enum _BiometricLockState { ready, needsSetup, notLoggedIn, deviceUnavailable }
 
 class BiometricLockScreen extends StatefulWidget {
   const BiometricLockScreen({super.key});
@@ -44,11 +39,14 @@ class _BiometricLockScreenState extends State<BiometricLockScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _checkBiometricAvailability());
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _checkBiometricAvailability(),
+    );
   }
 
   Future<void> _checkBiometricAvailability() async {
-    final fingerprintAvailable = await BiometricService.isFingerprintAvailable();
+    final fingerprintAvailable =
+        await BiometricService.isFingerprintAvailable();
     final token = CacheHelper().getDataString(
       key: AppConstants.biometricTokenKey,
     );
@@ -87,17 +85,14 @@ class _BiometricLockScreenState extends State<BiometricLockScreen> {
     setState(() => _isSettingUp = true);
 
     final result = await context.read<AuthRepository>().setupBiometricLogin(
-          promptMessage: 'mosaedBiometricReason'.tr(),
-        );
+      promptMessage: 'mosaedBiometricReason'.tr(),
+    );
 
     if (!mounted) return;
     setState(() => _isSettingUp = false);
 
     if (result.success) {
-      AppFunctions.navigateToAndFinish(
-        context,
-        const BiometricSuccessScreen(),
-      );
+      AppFunctions.navigateToAndFinish(context, const BiometricSuccessScreen());
       return;
     }
 
@@ -145,16 +140,14 @@ class _BiometricLockScreenState extends State<BiometricLockScreen> {
         return Scaffold(
           backgroundColor: MosaedColors.background,
           body: SafeArea(
-            child: SingleChildScrollView(
-              padding: EdgeInsets.symmetric(horizontal: 24.w),
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
               child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   if (showStatusPanel) ...[
                     SizedBox(height: 60.h),
-                    _StatusCard(
-                      state: _state,
-                      message: _statusMessage!,
-                    ),
+                    _StatusCard(state: _state, message: _statusMessage!),
                     SizedBox(height: 40.h),
                     if (_state == _BiometricLockState.needsSetup)
                       MosaedPrimaryButton(
@@ -310,15 +303,15 @@ class _BiometricLockScreenState extends State<BiometricLockScreen> {
                       );
                     },
                   ),
-                  SizedBox(height: 20.h),
-                  Text(
-                    'Mosaed v${AppConstants.appVersion} • ${'mosaedHighSecurity'.tr()}',
-                    style: getRegularStyle(
-                      fontSize: 11.sp,
-                      color: MosaedColors.textHint,
-                    ),
-                  ),
-                  SizedBox(height: 16.h),
+                  // SizedBox(height: 20.h),
+                  // Text(
+                  //   'Mosaed v${AppConstants.appVersion} • ${'mosaedHighSecurity'.tr()}',
+                  //   style: getRegularStyle(
+                  //     fontSize: 11.sp,
+                  //     color: MosaedColors.textHint,
+                  //   ),
+                  // ),
+                  // SizedBox(height: 16.h),
                 ],
               ),
             ),
@@ -330,10 +323,7 @@ class _BiometricLockScreenState extends State<BiometricLockScreen> {
 }
 
 class _StatusCard extends StatelessWidget {
-  const _StatusCard({
-    required this.state,
-    required this.message,
-  });
+  const _StatusCard({required this.state, required this.message});
 
   final _BiometricLockState state;
   final String message;
@@ -368,9 +358,7 @@ class _StatusCard extends StatelessWidget {
             textAlign: TextAlign.center,
             style: getMediumStyle(
               fontSize: 14.sp,
-              color: isSetup
-                  ? MosaedColors.textPrimary
-                  : MosaedColors.danger,
+              color: isSetup ? MosaedColors.textPrimary : MosaedColors.danger,
             ),
           ),
         ],

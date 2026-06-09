@@ -4,8 +4,6 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../../core/constants/mosaed_colors.dart';
 import '../../../../core/constants/styles_manager.dart';
 
-
-
 class MosaedPrimaryButton extends StatelessWidget {
   const MosaedPrimaryButton({
     super.key,
@@ -49,10 +47,7 @@ class MosaedPrimaryButton extends StatelessWidget {
                 children: [
                   Text(
                     text,
-                    style: getBoldStyle(
-                      fontSize: 15.sp,
-                      color: Colors.white,
-                    ),
+                    style: getBoldStyle(fontSize: 10.sp, color: Colors.white),
                   ),
                   if (icon != null) ...[
                     SizedBox(width: 8.w),
@@ -103,7 +98,7 @@ class MosaedOutlineButton extends StatelessWidget {
                 text,
                 textAlign: TextAlign.center,
                 style: getMediumStyle(
-                  fontSize: 14.sp,
+                  fontSize: 10.sp,
                   color: MosaedColors.textPrimary,
                 ),
               ),
@@ -116,11 +111,7 @@ class MosaedOutlineButton extends StatelessWidget {
 }
 
 class MosaedPhoneField extends StatelessWidget {
-  const MosaedPhoneField({
-    super.key,
-    required this.controller,
-    this.validator,
-  });
+  const MosaedPhoneField({super.key, required this.controller, this.validator});
 
   final TextEditingController controller;
   final String? Function(String?)? validator;
@@ -131,10 +122,7 @@ class MosaedPhoneField extends StatelessWidget {
       controller: controller,
       keyboardType: TextInputType.phone,
       validator: validator,
-      style: getRegularStyle(
-        fontSize: 15.sp,
-        color: MosaedColors.textPrimary,
-      ),
+      style: getRegularStyle(fontSize: 15.sp, color: MosaedColors.textPrimary),
       decoration: InputDecoration(
         hintText: '5XXXXXXXX',
         hintStyle: getRegularStyle(
@@ -249,16 +237,20 @@ class MosaedInputField extends StatelessWidget {
                 : null,
             filled: true,
             fillColor: MosaedColors.inputFill,
-            contentPadding:
-                EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+            contentPadding: EdgeInsets.symmetric(
+              horizontal: 16.w,
+              vertical: 14.h,
+            ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14.r),
               borderSide: const BorderSide(color: MosaedColors.border),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14.r),
-              borderSide:
-                  const BorderSide(color: MosaedColors.primary, width: 1.5),
+              borderSide: const BorderSide(
+                color: MosaedColors.primary,
+                width: 1.5,
+              ),
             ),
           ),
         ),
