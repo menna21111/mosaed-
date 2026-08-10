@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-import '../../../app/auth_navigation.dart';
 import '../../../core/constants/assets_manager.dart';
 import '../../../core/constants/mosaed_colors.dart';
+import '../../onboarding/presentation/onboarding_screen.dart';
 
 class SplashScrean extends StatefulWidget {
   const SplashScrean({super.key});
@@ -22,7 +22,7 @@ class _SplashScreanState extends State<SplashScrean> {
   Future<void> _boot() async {
     await Future.delayed(const Duration(milliseconds: 1800));
     if (!mounted) return;
-    AuthNavigation.goFromSplash(context);
+    await OnboardingGate.openIfNeeded(context);
   }
 
   @override
@@ -37,15 +37,6 @@ class _SplashScreanState extends State<SplashScrean> {
               ImageAssets.logo,
               width: 260.w,
               fit: BoxFit.contain,
-            ),
-            SizedBox(height: 32.h),
-            SizedBox(
-              width: 28.w,
-              height: 28.w,
-              child: CircularProgressIndicator(
-                strokeWidth: 2.5,
-                color: MosaedColors.primary,
-              ),
             ),
           ],
         ),

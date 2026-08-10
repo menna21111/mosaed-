@@ -135,6 +135,7 @@ class _BiometricLockScreenState extends State<BiometricLockScreen> {
         }
       },
       builder: (context, state) {
+        final isLoggedIn = context.read<AuthRepository>().isLoggedIn;
         final showStatusPanel = _state != _BiometricLockState.ready;
 
         return Scaffold(
@@ -155,6 +156,14 @@ class _BiometricLockScreenState extends State<BiometricLockScreen> {
                         icon: Icons.fingerprint_rounded,
                         isLoading: _isSettingUp,
                         onPressed: _setupBiometric,
+                      )
+                    else if (_state == _BiometricLockState.deviceUnavailable &&
+                        isLoggedIn)
+                      MosaedPrimaryButton(
+                        text: 'mosaedContinue'.tr(),
+                        icon: Icons.arrow_forward_rounded,
+                        onPressed: () =>
+                            AuthNavigation.goAfterBiometricUnlock(context),
                       )
                     else
                       MosaedPrimaryButton(

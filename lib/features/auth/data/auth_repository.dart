@@ -8,32 +8,12 @@ import '../../../core/network/failure.dart';
 import '../../../core/services/biometric_service.dart';
 import '../../../core/services/device_service.dart';
 import 'models/auth_session.dart';
+import 'models/customer_profile.dart';
 
 class AuthRepository {
-  String _extractError(dynamic data) {
-    if (data is Map<String, dynamic>) {
-      if (data['detail'] != null) return data['detail'].toString();
-      if (data['message'] != null) return data['message'].toString();
-      if (data['error_message'] != null) {
-        return data['error_message'].toString();
-      }
-      if (data['non_field_errors'] is List &&
-          (data['non_field_errors'] as List).isNotEmpty) {
-        return data['non_field_errors'].first.toString();
-      }
-      for (final entry in data.entries) {
-        if (entry.value is List && (entry.value as List).isNotEmpty) {
-          return '${entry.key}: ${(entry.value as List).first}';
-        }
-        if (entry.value is String && entry.value.toString().isNotEmpty) {
-          return entry.value.toString();
-        }
-      }
-    }
-    return 'حدث خطأ، حاول مرة أخرى';
-  }
+  String _extractError(dynamic data) => ServerFailure.extractApiMessage(data);
 
-  Future<void> sendOtp(String phoneNumber) async {
+  Future<String?> sendOtp(String phoneNumber) async {
     try {
       final response = await DioHelper.postDataWithoutAuth(
         url: AppConstants.otpSend,
@@ -45,9 +25,20 @@ class AuthRepository {
       if (response.statusCode != 200 && response.statusCode != 201) {
         throw ServerFailure(_extractError(response.data));
       }
+      return _extractOtpCode(response.data);
     } on DioException catch (e) {
       throw ServerFailure.fromDioError(e);
     }
+  }
+
+  String? _extractOtpCode(dynamic data) {
+    if (data is! Map) return null;
+    final map = Map<String, dynamic>.from(data);
+    for (final key in ['otp_code', 'otp', 'code', 'verification_code']) {
+      final value = map[key]?.toString().trim();
+      if (value != null && value.isNotEmpty) return value;
+    }
+    return null;
   }
 
   Future<AuthSession> verifyOtp({
@@ -86,19 +77,55 @@ class AuthRepository {
     }
   }
 
+  Future<CustomerProfile> getCustomerProfile() async {
+    try {
+      final response = await DioHelper.getData(
+        url: AppConstants.customerProfile,
+      );
+
+      if (response.statusCode != 200) {
+        throw ServerFailure(_extractError(response.data));
+      }
+
+      final profile = CustomerProfile.fromJson(
+        response.data is Map<String, dynamic>
+            ? response.data as Map<String, dynamic>
+            : {},
+      );
+
+      await CacheHelper().saveData(
+        key: AppConstants.userNameKey,
+        value: profile.name,
+      );
+      await CacheHelper().saveData(
+        key: AppConstants.phoneNumberKey,
+        value: profile.phoneNumber,
+      );
+
+      return profile;
+    } on DioException catch (e) {
+      throw ServerFailure.fromDioError(e);
+    }
+  }
+
   Future<void> registerCustomer({
     required String name,
     required String phoneNumber,
-    required String email,
+    String? marketingCode,
   }) async {
     try {
+      final data = <String, dynamic>{
+        'name': name,
+        'phone_number': phoneNumber,
+      };
+      final code = marketingCode?.trim();
+      if (code != null && code.isNotEmpty) {
+        data['marketing_code'] = code;
+      }
+
       final response = await DioHelper.postDataWithoutAuth(
         url: AppConstants.customerRegister,
-        data: {
-          'name': name,
-          'phone_number': phoneNumber,
-          'email': email,
-        },
+        data: data,
       );
 
       if (response.statusCode != 200 && response.statusCode != 201) {
@@ -240,6 +267,15 @@ class AuthRepository {
   Future<bool> canUseBiometricLoginOnDevice() async {
     if (!canUseBiometricLogin) return false;
     return BiometricService.isFingerprintAvailable();
+  }
+
+  Future<void> registerBiometricInBackground() async {
+    try {
+      final available = await BiometricService.isFingerprintAvailable();
+      if (!available) return;
+      await registerBiometric();
+      await enableBiometric();
+    } catch (_) {}
   }
 
   Future<({bool success, String? error})> setupBiometricLogin({

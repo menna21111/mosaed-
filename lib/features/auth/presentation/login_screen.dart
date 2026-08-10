@@ -26,15 +26,16 @@ class LoginScrean extends StatefulWidget {
 
 class _LoginScreanState extends State<LoginScrean> {
   final _formKey = GlobalKey<FormState>();
-  final _phoneController = TextEditingController();
+   final TextEditingController _phoneController = TextEditingController();
+
   bool _biometricAvailable = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _checkBiometric());
-    final storedPhone = context.read<AuthRepository>().storedPhone;
-    if (storedPhone != null) _phoneController.text = storedPhone;
+
+
   }
 
   Future<void> _checkBiometric() async {
@@ -83,6 +84,14 @@ class _LoginScreanState extends State<LoginScrean> {
     return BlocConsumer<AuthCubit, AuthState>(
       listener: (context, state) {
         if (state is OtpSent) {
+          final otpCode = state.otpCode?.trim();
+          if (otpCode != null && otpCode.isNotEmpty) {
+            AppFunctions.showsToast(
+              'mosaedOtpCodeToast'.tr(args: [otpCode]),
+              MosaedColors.success,
+              context,
+            );
+          }
           AppFunctions.navigateTo(
             context,
             OtpScreen(phoneNumber: state.phoneNumber),
@@ -105,33 +114,36 @@ class _LoginScreanState extends State<LoginScrean> {
               child: Form(
                 key: _formKey,
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     SizedBox(height: 32.h),
                     const MosaedLogo(),
                     SizedBox(height: 28.h),
                     Text(
                       'mosaedWelcome'.tr(),
+                      textAlign: TextAlign.center,
                       style: getBoldStyle(
-                        fontSize: 24.sp,
+                        fontSize: 26.sp,
                         color: MosaedColors.textPrimary,
                       ),
                     ),
-                    SizedBox(height: 8.h),
+                    SizedBox(height: 10.h),
                     Text(
                       'mosaedLoginSubtitle'.tr(),
                       textAlign: TextAlign.center,
                       style: getRegularStyle(
-                        fontSize: 14.sp,
+                        fontSize: 15.sp,
                         color: MosaedColors.textSecondary,
+                        height: 1.45,
                       ),
                     ),
-                    SizedBox(height: 28.h),
+                    SizedBox(height: 32.h),
                     Align(
                       alignment: AlignmentDirectional.centerStart,
                       child: Text(
                         'mosaedPhoneLabel'.tr(),
                         style: getMediumStyle(
-                          fontSize: 13.sp,
+                          fontSize: 14.sp,
                           color: MosaedColors.textSecondary,
                         ),
                       ),
@@ -153,7 +165,7 @@ class _LoginScreanState extends State<LoginScrean> {
                     MosaedPrimaryButton(
                       text: 'mosaedSendOtp'.tr(),
                       isLoading: isLoading,
-                      icon: Icons.arrow_back_rounded,
+                      icon: Icons.arrow_back_ios_new_rounded,
                       onPressed: _sendOtp,
                     ),
                     SizedBox(height: 24.h),
@@ -168,9 +180,12 @@ class _LoginScreanState extends State<LoginScrean> {
                             width: 64.w,
                             height: 64.w,
                             decoration: BoxDecoration(
-                              color: MosaedColors.surface,
+                              color: MosaedColors.surfaceWhite,
                               borderRadius: BorderRadius.circular(16.r),
-                              border: Border.all(color: MosaedColors.border),
+                              border: Border.all(
+                                color: MosaedColors.primaryContainer,
+                                width: 1.4,
+                              ),
                               boxShadow: [
                                 BoxShadow(
                                   color: Colors.black.withValues(alpha: 0.04),
@@ -181,7 +196,7 @@ class _LoginScreanState extends State<LoginScrean> {
                             ),
                             child: Icon(
                               Icons.fingerprint_rounded,
-                              color: MosaedColors.textPrimary,
+                              color: MosaedColors.primaryContainer,
                               size: 32.sp,
                             ),
                           ),
@@ -193,9 +208,10 @@ class _LoginScreanState extends State<LoginScrean> {
                       onTap: () => AppFunctions.navigateTo(
                         context,
                         const RegisterScreen(),
-
-PageTransitionType.leftToRight      ),
+                        PageTransitionType.leftToRight,
+                      ),
                       child: RichText(
+                        textAlign: TextAlign.center,
                         text: TextSpan(
                           style: getRegularStyle(
                             fontSize: 14.sp,
@@ -219,7 +235,7 @@ PageTransitionType.leftToRight      ),
                       'mosaedTerms'.tr(),
                       textAlign: TextAlign.center,
                       style: getRegularStyle(
-                        fontSize: 11.sp,
+                        fontSize: 12.sp,
                         color: MosaedColors.textSecondary,
                       ),
                     ),

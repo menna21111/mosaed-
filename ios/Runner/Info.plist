@@ -51,6 +51,21 @@
 	<true/>
 	<key>NSFaceIDUsageDescription</key>
 	<string>MOSSAD uses Face ID to securely unlock your agent profile.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Mosaed needs your location to set your service address on the map.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Mosaed needs access to your photos to attach images to custom service requests.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Mosaed needs camera access to take photos for custom service requests.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+		<string>remote-notification</string>
+	</array>
+	<key>FirebaseAppDelegateProxyEnabled</key>
+	<true/>
+	<key>NSPushNotificationsUsageDescription</key>
+	<string>يحتاج التطبيق لإرسال إشعارات لتحديثات الطلبات والدفع والتنبيهات المهمة.</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>

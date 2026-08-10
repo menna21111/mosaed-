@@ -23,19 +23,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
-  final _emailController = TextEditingController();
-  final _cityController = TextEditingController();
-  final _districtController = TextEditingController();
-  final _streetController = TextEditingController();
+  final _marketingCodeController = TextEditingController();
 
   @override
   void dispose() {
     _nameController.dispose();
     _phoneController.dispose();
-    _emailController.dispose();
-    _cityController.dispose();
-    _districtController.dispose();
-    _streetController.dispose();
+    _marketingCodeController.dispose();
     super.dispose();
   }
 
@@ -49,10 +43,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   void _register() {
     if (!_formKey.currentState!.validate()) return;
+    final code = _marketingCodeController.text.trim();
     context.read<AuthCubit>().register(
           name: _nameController.text.trim(),
           phoneNumber: _normalizePhone(_phoneController.text),
-          email: _emailController.text.trim(),
+          marketingCode: code.isEmpty ? null : code,
         );
   }
 
@@ -61,11 +56,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return BlocConsumer<AuthCubit, AuthState>(
       listener: (context, state) {
         if (state is OtpSent) {
-          AppFunctions.showsToast(
-            'mosaedRegisterSuccess'.tr(),
-            MosaedColors.success,
-            context,
-          );
+          final otpCode = state.otpCode?.trim();
+          if (otpCode != null && otpCode.isNotEmpty) {
+            AppFunctions.showsToast(
+              'mosaedOtpCodeToast'.tr(args: [otpCode]),
+              MosaedColors.success,
+              context,
+            );
+          } else {
+            AppFunctions.showsToast(
+              'mosaedRegisterVerifyPhone'.tr(),
+              MosaedColors.success,
+              context,
+            );
+          }
           AppFunctions.navigateToAndFinish(
             context,
             OtpScreen(phoneNumber: state.phoneNumber),
@@ -158,43 +162,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ),
                           SizedBox(height: 14.h),
                           MosaedInputField(
-                            label: 'email'.tr(),
-                            controller: _emailController,
-                            hint: 'example@domain.com',
-                            icon: Icons.mail_outline_rounded,
-                            keyboardType: TextInputType.emailAddress,
-                            validator: (v) {
-                              if (v == null || v.isEmpty) {
-                                return 'emailRequired'.tr();
-                              }
-                              if (!v.contains('@')) return 'invalidEmail'.tr();
-                              return null;
-                            },
-                          ),
-                          SizedBox(height: 14.h),
-                          MosaedInputField(
-                            label: 'mosaedCity'.tr(),
-                            controller: _cityController,
-                            hint: 'mosaedSelectCity'.tr(),
-                            icon: Icons.location_city_outlined,
-                            readOnly: true,
-                            onTap: () {},
-                          ),
-                          SizedBox(height: 14.h),
-                          MosaedInputField(
-                            label: 'mosaedDistrict'.tr(),
-                            controller: _districtController,
-                            hint: 'mosaedSelectDistrict'.tr(),
-                            icon: Icons.place_outlined,
-                            readOnly: true,
-                            onTap: () {},
-                          ),
-                          SizedBox(height: 14.h),
-                          MosaedInputField(
-                            label: 'mosaedStreet'.tr(),
-                            controller: _streetController,
-                            hint: 'mosaedStreetHint'.tr(),
-                            icon: Icons.signpost_outlined,
+                            label: 'mosaedMarketingCodeOptional'.tr(),
+                            controller: _marketingCodeController,
+                            hint: 'mosaedMarketingCodeHint'.tr(),
+                            icon: Icons.local_offer_outlined,
                           ),
                           SizedBox(height: 20.h),
                           MosaedPrimaryButton(

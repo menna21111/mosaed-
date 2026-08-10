@@ -16,12 +16,13 @@ class AuthLoading extends AuthState {
 }
 
 class OtpSent extends AuthState {
-  const OtpSent({required this.phoneNumber});
+  const OtpSent({required this.phoneNumber, this.otpCode});
 
   final String phoneNumber;
+  final String? otpCode;
 
   @override
-  List<Object?> get props => [phoneNumber];
+  List<Object?> get props => [phoneNumber, otpCode];
 }
 
 class RegisterSuccess extends AuthState {
@@ -48,6 +49,28 @@ class AuthLoggedOut extends AuthState {
 
 class AuthFailure extends AuthState {
   const AuthFailure(this.message);
+
+  final String message;
+
+  @override
+  List<Object?> get props => [message];
+}
+
+class ProfileLoading extends AuthState {
+  const ProfileLoading();
+}
+
+class ProfileLoaded extends AuthState {
+  const ProfileLoaded({required this.profile});
+
+  final CustomerProfile profile;
+
+  @override
+  List<Object?> get props => [profile];
+}
+
+class ProfileFailure extends AuthState {
+  const ProfileFailure(this.message);
 
   final String message;
 

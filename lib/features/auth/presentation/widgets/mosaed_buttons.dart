@@ -20,18 +20,18 @@ class MosaedPrimaryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final radius = BorderRadius.circular(16.r);
     return SizedBox(
       width: double.infinity,
-      height: 52.h,
+      height: 54.h,
       child: ElevatedButton(
         onPressed: isLoading ? null : onPressed,
         style: ElevatedButton.styleFrom(
-          backgroundColor: MosaedColors.primary,
-          disabledBackgroundColor: MosaedColors.primary.withValues(alpha: 0.6),
+          backgroundColor: MosaedColors.primaryContainer,
+          disabledBackgroundColor:
+              MosaedColors.primaryContainer.withValues(alpha: 0.6),
           elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14.r),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: radius),
         ),
         child: isLoading
             ? SizedBox(
@@ -47,11 +47,11 @@ class MosaedPrimaryButton extends StatelessWidget {
                 children: [
                   Text(
                     text,
-                    style: getBoldStyle(fontSize: 10.sp, color: Colors.white),
+                    style: getBoldStyle(fontSize: 16.sp, color: Colors.white),
                   ),
                   if (icon != null) ...[
                     SizedBox(width: 8.w),
-                    Icon(icon, color: Colors.white, size: 18.sp),
+                    Icon(icon, color: Colors.white, size: 20.sp),
                   ],
                 ],
               ),
@@ -76,13 +76,13 @@ class MosaedOutlineButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       width: double.infinity,
-      height: 52.h,
+      height: 54.h,
       child: OutlinedButton(
         onPressed: onPressed,
         style: OutlinedButton.styleFrom(
-          side: const BorderSide(color: MosaedColors.border),
+          side: const BorderSide(color: MosaedColors.primaryContainer),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14.r),
+            borderRadius: BorderRadius.circular(16.r),
           ),
           backgroundColor: MosaedColors.surface,
         ),
@@ -98,7 +98,7 @@ class MosaedOutlineButton extends StatelessWidget {
                 text,
                 textAlign: TextAlign.center,
                 style: getMediumStyle(
-                  fontSize: 10.sp,
+                  fontSize: 15.sp,
                   color: MosaedColors.textPrimary,
                 ),
               ),
@@ -110,71 +110,146 @@ class MosaedOutlineButton extends StatelessWidget {
   }
 }
 
+/// Compact container action (skip / chip) — same brand as login fields.
+class MosaedChipButton extends StatelessWidget {
+  const MosaedChipButton({
+    super.key,
+    required this.text,
+    required this.onPressed,
+    this.icon,
+    this.iconAtEnd = true,
+  });
+
+  final String text;
+  final VoidCallback? onPressed;
+  final IconData? icon;
+  final bool iconAtEnd;
+
+  @override
+  Widget build(BuildContext context) {
+    final child = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (icon != null && !iconAtEnd) ...[
+          Icon(icon, size: 16.sp, color: MosaedColors.primaryContainer),
+          SizedBox(width: 6.w),
+        ],
+        Text(
+          text,
+          style: getBoldStyle(
+            fontSize: 13.sp,
+            color: MosaedColors.primary,
+          ),
+        ),
+        if (icon != null && iconAtEnd) ...[
+          SizedBox(width: 6.w),
+          Icon(icon, size: 16.sp, color: MosaedColors.primaryContainer),
+        ],
+      ],
+    );
+
+    return InkWell(
+      onTap: onPressed,
+      borderRadius: BorderRadius.circular(12.r),
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 8.h),
+        decoration: BoxDecoration(
+          color: MosaedColors.surfaceWhite,
+          borderRadius: BorderRadius.circular(12.r),
+          border: Border.all(
+            color: MosaedColors.primaryContainer,
+            width: 1.4,
+          ),
+        ),
+        child: child,
+      ),
+    );
+  }
+}
+
 class MosaedPhoneField extends StatelessWidget {
   const MosaedPhoneField({super.key, required this.controller, this.validator});
 
   final TextEditingController controller;
   final String? Function(String?)? validator;
 
+  static const _fieldBorder = MosaedColors.primaryContainer;
+
   @override
   Widget build(BuildContext context) {
-    return TextFormField(
-      controller: controller,
-      keyboardType: TextInputType.phone,
-      validator: validator,
-      style: getRegularStyle(fontSize: 15.sp, color: MosaedColors.textPrimary),
-      decoration: InputDecoration(
-        hintText: '5XXXXXXXX',
-        hintStyle: getRegularStyle(
-          fontSize: 15.sp,
-          color: MosaedColors.textHint,
+    final radius = BorderRadius.circular(16.r);
+    return Directionality(
+      textDirection: TextDirection.ltr,
+      child: TextFormField(
+        controller: controller,
+        keyboardType: TextInputType.phone,
+        textAlign: TextAlign.left,
+        validator: validator,
+        style: getRegularStyle(
+          fontSize: 16.sp,
+          color: MosaedColors.textPrimary,
         ),
-        prefixIcon: Icon(
-          Icons.smartphone_outlined,
-          color: MosaedColors.textSecondary,
-          size: 20.sp,
-        ),
-        suffixIcon: Container(
-          width: 90.w,
-          alignment: Alignment.center,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                '+966',
-                style: getMediumStyle(
-                  fontSize: 14.sp,
-                  color: MosaedColors.textPrimary,
-                ),
-              ),
-              Icon(
-                Icons.keyboard_arrow_down_rounded,
-                color: MosaedColors.textSecondary,
-                size: 20.sp,
-              ),
-              Container(
-                width: 1,
-                height: 24.h,
-                margin: EdgeInsets.only(left: 8.w),
-                color: MosaedColors.border,
-              ),
-            ],
+        decoration: InputDecoration(
+          hintText: '5XXXXXXXX',
+          hintStyle: getRegularStyle(
+            fontSize: 15.sp,
+            color: MosaedColors.textHint,
           ),
-        ),
-        filled: true,
-        fillColor: MosaedColors.inputFill,
-        contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14.r),
-          borderSide: const BorderSide(color: MosaedColors.border),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14.r),
-          borderSide: const BorderSide(color: MosaedColors.primary, width: 1.5),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14.r),
-          borderSide: const BorderSide(color: MosaedColors.danger),
+          prefixIcon: Padding(
+            padding: EdgeInsetsDirectional.only(start: 12.w, end: 8.w),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '+966',
+                  style: getBoldStyle(
+                    fontSize: 15.sp,
+                    color: MosaedColors.textPrimary,
+                  ),
+                ),
+                SizedBox(width: 4.w),
+                Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  color: MosaedColors.textSecondary,
+                  size: 20.sp,
+                ),
+                Container(
+                  width: 1,
+                  height: 24.h,
+                  margin: EdgeInsetsDirectional.only(start: 10.w),
+                  color: MosaedColors.primaryContainer.withValues(alpha: 0.45),
+                ),
+              ],
+            ),
+          ),
+          prefixIconConstraints: BoxConstraints(minWidth: 96.w, minHeight: 0),
+          suffixIcon: Icon(
+            Icons.smartphone_outlined,
+            color: MosaedColors.primaryContainer,
+            size: 22.sp,
+          ),
+          filled: true,
+          fillColor: MosaedColors.surfaceWhite,
+          contentPadding: EdgeInsets.symmetric(
+            horizontal: 16.w,
+            vertical: 16.h,
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: radius,
+            borderSide: const BorderSide(color: _fieldBorder, width: 1.4),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: radius,
+            borderSide: const BorderSide(color: _fieldBorder, width: 1.8),
+          ),
+          errorBorder: OutlineInputBorder(
+            borderRadius: radius,
+            borderSide: const BorderSide(color: MosaedColors.danger),
+          ),
+          focusedErrorBorder: OutlineInputBorder(
+            borderRadius: radius,
+            borderSide: const BorderSide(color: MosaedColors.danger, width: 1.5),
+          ),
         ),
       ),
     );
@@ -203,16 +278,22 @@ class MosaedInputField extends StatelessWidget {
   final bool readOnly;
   final VoidCallback? onTap;
 
+  static const _fieldBorder = MosaedColors.primaryContainer;
+
   @override
   Widget build(BuildContext context) {
+    final radius = BorderRadius.circular(16.r);
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          label,
-          style: getMediumStyle(
-            fontSize: 13.sp,
-            color: MosaedColors.textSecondary,
+        Align(
+          alignment: AlignmentDirectional.centerStart,
+          child: Text(
+            label,
+            style: getMediumStyle(
+              fontSize: 14.sp,
+              color: MosaedColors.textSecondary,
+            ),
           ),
         ),
         SizedBox(height: 8.h),
@@ -222,33 +303,42 @@ class MosaedInputField extends StatelessWidget {
           onTap: onTap,
           keyboardType: keyboardType,
           validator: validator,
+          textAlign: TextAlign.start,
           style: getRegularStyle(
-            fontSize: 15.sp,
+            fontSize: 16.sp,
             color: MosaedColors.textPrimary,
           ),
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: getRegularStyle(
-              fontSize: 14.sp,
+              fontSize: 15.sp,
               color: MosaedColors.textHint,
             ),
             prefixIcon: icon != null
-                ? Icon(icon, color: MosaedColors.textSecondary, size: 20.sp)
+                ? Icon(icon, color: MosaedColors.primaryContainer, size: 22.sp)
                 : null,
             filled: true,
-            fillColor: MosaedColors.inputFill,
+            fillColor: MosaedColors.surfaceWhite,
             contentPadding: EdgeInsets.symmetric(
               horizontal: 16.w,
-              vertical: 14.h,
+              vertical: 16.h,
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14.r),
-              borderSide: const BorderSide(color: MosaedColors.border),
+              borderRadius: radius,
+              borderSide: const BorderSide(color: _fieldBorder, width: 1.4),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14.r),
+              borderRadius: radius,
+              borderSide: const BorderSide(color: _fieldBorder, width: 1.8),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: radius,
+              borderSide: const BorderSide(color: MosaedColors.danger),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: radius,
               borderSide: const BorderSide(
-                color: MosaedColors.primary,
+                color: MosaedColors.danger,
                 width: 1.5,
               ),
             ),
@@ -268,18 +358,26 @@ class MosaedDividerText extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        const Expanded(child: Divider(color: MosaedColors.border)),
+        Expanded(
+          child: Divider(
+            color: MosaedColors.primaryContainer.withValues(alpha: 0.35),
+          ),
+        ),
         Padding(
           padding: EdgeInsets.symmetric(horizontal: 12.w),
           child: Text(
             text,
             style: getRegularStyle(
-              fontSize: 12.sp,
+              fontSize: 13.sp,
               color: MosaedColors.textSecondary,
             ),
           ),
         ),
-        const Expanded(child: Divider(color: MosaedColors.border)),
+        Expanded(
+          child: Divider(
+            color: MosaedColors.primaryContainer.withValues(alpha: 0.35),
+          ),
+        ),
       ],
     );
   }

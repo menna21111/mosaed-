@@ -2,9 +2,11 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/network/failure.dart';
+import '../../../../core/services/notification/push_notification_service.dart';
 
 import '../../data/auth_repository.dart';
 import '../../data/models/auth_session.dart';
+import '../../data/models/customer_profile.dart';
 
 part 'auth_state.dart';
 
@@ -16,8 +18,8 @@ class AuthCubit extends Cubit<AuthState> {
   Future<void> sendOtp(String phoneNumber) async {
     emit(const AuthLoading());
     try {
-      await _repository.sendOtp(phoneNumber);
-      emit(OtpSent(phoneNumber: phoneNumber));
+      final otpCode = await _repository.sendOtp(phoneNumber);
+      emit(OtpSent(phoneNumber: phoneNumber, otpCode: otpCode));
     } on ServerFailure catch (e) {
       emit(AuthFailure(e.errMessage));
     } catch (_) {
@@ -36,6 +38,8 @@ class AuthCubit extends Cubit<AuthState> {
         otpCode: otpCode,
       );
       emit(AuthVerified(session: session));
+      // ignore: unawaited_futures
+      PushNotificationService.syncTokenWithBackend();
     } on ServerFailure catch (e) {
       emit(AuthFailure(e.errMessage));
     } catch (_) {
@@ -46,17 +50,17 @@ class AuthCubit extends Cubit<AuthState> {
   Future<void> register({
     required String name,
     required String phoneNumber,
-    required String email,
+    String? marketingCode,
   }) async {
     emit(const AuthLoading());
     try {
       await _repository.registerCustomer(
         name: name,
         phoneNumber: phoneNumber,
-        email: email,
+        marketingCode: marketingCode,
       );
-      await _repository.sendOtp(phoneNumber);
-      emit(OtpSent(phoneNumber: phoneNumber));
+      final otpCode = await _repository.sendOtp(phoneNumber);
+      emit(OtpSent(phoneNumber: phoneNumber, otpCode: otpCode));
     } on ServerFailure catch (e) {
       emit(AuthFailure(e.errMessage));
     } catch (_) {
@@ -69,6 +73,8 @@ class AuthCubit extends Cubit<AuthState> {
     try {
       final session = await _repository.loginWithBiometric();
       emit(AuthVerified(session: session));
+      // ignore: unawaited_futures
+      PushNotificationService.syncTokenWithBackend();
     } on ServerFailure catch (e) {
       emit(AuthFailure(e.errMessage));
     } catch (_) {
@@ -79,12 +85,25 @@ class AuthCubit extends Cubit<AuthState> {
   Future<void> logout() async {
     emit(const AuthLoading());
     try {
+      await PushNotificationService.removeTokenFromBackend();
       await _repository.logout();
       emit(const AuthLoggedOut());
     } on ServerFailure catch (e) {
       emit(AuthFailure(e.errMessage));
     } catch (_) {
       emit(const AuthFailure('حدث خطأ غير متوقع'));
+    }
+  }
+
+  Future<void> fetchProfile() async {
+    emit(const ProfileLoading());
+    try {
+      final profile = await _repository.getCustomerProfile();
+      emit(ProfileLoaded(profile: profile));
+    } on ServerFailure catch (e) {
+      emit(ProfileFailure(e.errMessage));
+    } catch (_) {
+      emit(const ProfileFailure('حدث خطأ غير متوقع'));
     }
   }
 

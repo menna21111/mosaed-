@@ -6,14 +6,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:pinput/pinput.dart';
 
-import '../../../app/auth_navigation.dart';
 import '../../../app/functions.dart';
 import '../../../core/constants/mosaed_colors.dart';
 import '../../../core/constants/styles_manager.dart';
-import '../../../core/services/biometric_service.dart';
-
+import '../../services/presentation/address_onboarding_screen.dart';
 import '../data/auth_repository.dart';
-import 'biometric_success_screen.dart';
 import 'cubit/auth_cubit.dart';
 import 'widgets/mosaed_buttons.dart';
 import 'widgets/mosaed_logo.dart';
@@ -29,18 +26,6 @@ class OtpScreen extends StatefulWidget {
 
 class _OtpScreenState extends State<OtpScreen> {
   final _otpController = TextEditingController();
-  bool _biometricAvailable = false;
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _checkBiometric());
-  }
-
-  Future<void> _checkBiometric() async {
-    final available = await BiometricService.isFingerprintAvailable();
-    if (mounted) setState(() => _biometricAvailable = available);
-  }
 
   @override
   void dispose() {
@@ -63,33 +48,13 @@ class _OtpScreenState extends State<OtpScreen> {
         );
   }
 
-  Future<void> _handleVerified(AuthVerified state) async {
-    final repo = context.read<AuthRepository>();
-
-    if (!_biometricAvailable) {
-      AuthNavigation.goAfterLogin(context);
-      return;
-    }
-
-    final setup = await repo.setupBiometricLogin(
-      promptMessage: 'mosaedBiometricReason'.tr(),
-    );
-
+  Future<void> _handleVerified() async {
+    context.read<AuthRepository>().registerBiometricInBackground();
     if (!mounted) return;
-
-    if (setup.success) {
-      AppFunctions.navigateToAndFinish(
-        context,
-        const BiometricSuccessScreen(),
-      );
-    } else {
-      AppFunctions.showsToast(
-        setup.error ?? 'mosaedBiometricSetupFailed'.tr(),
-        MosaedColors.danger,
-        context,
-      );
-      AuthNavigation.goAfterLogin(context);
-    }
+    AppFunctions.navigateToAndFinish(
+      context,
+      const AddressOnboardingScreen(),
+    );
   }
 
   @override
@@ -111,7 +76,17 @@ class _OtpScreenState extends State<OtpScreen> {
     return BlocConsumer<AuthCubit, AuthState>(
       listener: (context, state) async {
         if (state is AuthVerified) {
-          await _handleVerified(state);
+          await _handleVerified();
+          if (context.mounted) context.read<AuthCubit>().reset();
+        } else if (state is OtpSent) {
+          final otpCode = state.otpCode?.trim();
+          if (otpCode != null && otpCode.isNotEmpty) {
+            AppFunctions.showsToast(
+              'mosaedOtpCodeToast'.tr(args: [otpCode]),
+              MosaedColors.success,
+              context,
+            );
+          }
           context.read<AuthCubit>().reset();
         } else if (state is AuthFailure) {
           AppFunctions.showsToast(state.message, MosaedColors.danger, context);

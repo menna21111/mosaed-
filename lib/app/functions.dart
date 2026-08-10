@@ -18,6 +18,7 @@ import 'package:page_transition/page_transition.dart';
 
 import '../core/constants/app_constants.dart';
 import '../core/constants/color_manager.dart';
+import 'app.dart';
 
 class AppFunctions {
   static String reverseString(String originalString) {
@@ -98,18 +99,40 @@ class AppFunctions {
     BuildContext context, {
     int seconds = 5,
   }) {
-    showToast(
-      text,
-      context: context,
-      backgroundColor: color,
-      animation: StyledToastAnimation.slideFromTopFade,
-      reverseAnimation: StyledToastAnimation.slideToTopFade,
-      position: StyledToastPosition.top,
-      animDuration: const Duration(seconds: 2),
-      duration: Duration(seconds: seconds),
-      curve: Curves.elasticOut,
-      reverseCurve: Curves.easeInOutCirc,
-    );
+    final toastContext = resolveToastContext(context);
+    if (toastContext == null) return;
+
+    try {
+      showToast(
+        text,
+        context: toastContext,
+        backgroundColor: color,
+        animation: StyledToastAnimation.slideFromTopFade,
+        reverseAnimation: StyledToastAnimation.slideToTopFade,
+        position: StyledToastPosition.top,
+        animDuration: const Duration(seconds: 2),
+        duration: Duration(seconds: seconds),
+        curve: Curves.elasticOut,
+        reverseCurve: Curves.easeInOutCirc,
+      );
+    } catch (e) {
+      debugPrint('showsToast skipped: $e');
+    }
+  }
+
+  /// [navigatorKey.currentContext] is the Navigator itself (parent of Overlay).
+  /// Styled toast needs a context under Overlay — use a child entry when needed.
+  static BuildContext? resolveToastContext(BuildContext context) {
+    if (Overlay.maybeOf(context) != null) return context;
+
+    final overlay = navigatorKey.currentState?.overlay;
+    if (overlay == null) return null;
+
+    BuildContext? childContext;
+    overlay.context.visitChildElements((element) {
+      childContext ??= element;
+    });
+    return childContext;
   }
 
   static String prettyTime(String timeString) {

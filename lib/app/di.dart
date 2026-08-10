@@ -5,6 +5,8 @@ import '../core/data_sources/local_data_source.dart';
 import '../core/data_sources/remote_data_source.dart';
 import '../core/network/network_info.dart';
 import '../features/auth/data/auth_repository.dart';
+import '../features/custom_service/data/custom_service_repository.dart';
+import '../features/services/data/services_repository.dart';
 
 final instance = GetIt.instance;
 
@@ -18,4 +20,11 @@ Future<void> initAppModule() async {
   instance.registerLazySingleton<RemoteDataSource>(() => RemoteDataSourceImpl());
   instance.registerLazySingleton<LocalDataSource>(() => LocalDataSourceImpl());
   instance.registerLazySingleton<AuthRepository>(() => AuthRepository());
+  instance.registerLazySingleton<ServicesRepository>(() => ServicesRepository());
+  instance.registerLazySingleton<CustomServiceRepository>(
+    () => CustomServiceRepository(),
+  );
+  // instance.registerLazySingleton<CloudinaryUploadService>(
+  //   () => CloudinaryUploadService(),
+  // );
 }
