@@ -1,21 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'color_manager.dart';
+import 'font_manager.dart';
 
 class ThemeManager {
   // ─── Light Theme ────────────────────────────────────────────────
   static ThemeData lightTheme = ThemeData(
     brightness: Brightness.light,
+    fontFamily: FontConstants.fontFamily,
     primaryColor: ColorManager.primaryColor,
     scaffoldBackgroundColor: ColorManager.backgroundColor,
 
     appBarTheme: const AppBarTheme(
       backgroundColor: ColorManager.backgroundColor,
       elevation: 0,
+      scrolledUnderElevation: 0,
+      surfaceTintColor: Colors.transparent,
+      shadowColor: Colors.transparent,
       titleTextStyle: TextStyle(
+        fontFamily: FontConstants.fontFamily,
         color: ColorManager.fontColor,
         fontSize: 20,
-        fontWeight: FontWeight.bold,
+        fontWeight: FontWeightManager.bold,
       ),
       iconTheme: IconThemeData(color: ColorManager.fontColor),
     ),
@@ -36,7 +42,11 @@ class ThemeManager {
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: ColorManager.surfaceLight,
-      hintStyle: const TextStyle(color: ColorManager.gray),
+      hintStyle: const TextStyle(
+        fontFamily: FontConstants.fontFamily,
+        color: ColorManager.gray,
+        fontWeight: FontWeightManager.regular,
+      ),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12.r),
         borderSide: const BorderSide(color: ColorManager.gray),
@@ -52,24 +62,49 @@ class ThemeManager {
     ),
 
     textTheme: const TextTheme(
-      bodyLarge: TextStyle(color: ColorManager.fontColor, fontSize: 16),
-      bodyMedium: TextStyle(color: ColorManager.gray, fontSize: 14),
+      bodyLarge: TextStyle(
+        fontFamily: FontConstants.fontFamily,
+        color: ColorManager.fontColor,
+        fontSize: 16,
+        fontWeight: FontWeightManager.regular,
+      ),
+      bodyMedium: TextStyle(
+        fontFamily: FontConstants.fontFamily,
+        color: ColorManager.gray,
+        fontSize: 14,
+        fontWeight: FontWeightManager.regular,
+      ),
+      titleLarge: TextStyle(
+        fontFamily: FontConstants.fontFamily,
+        color: ColorManager.fontColor,
+        fontSize: 20,
+        fontWeight: FontWeightManager.bold,
+      ),
+      labelLarge: TextStyle(
+        fontFamily: FontConstants.fontFamily,
+        fontWeight: FontWeightManager.medium,
+      ),
     ),
   );
 
   // ─── Dark Theme ──────────────────────────────────────────────────
   static ThemeData darkTheme = ThemeData(
     brightness: Brightness.dark,
+    fontFamily: FontConstants.fontFamily,
     primaryColor: ColorManager.primaryDarkColor,
     scaffoldBackgroundColor: ColorManager.backgroundDarkColor,
 
     appBarTheme: const AppBarTheme(
       backgroundColor: ColorManager.backgroundDarkColor,
       elevation: 0,
+      scrolledUnderElevation: 0,
+      surfaceTintColor: Colors.transparent,
+      shadowColor: Colors.transparent,
       titleTextStyle: TextStyle(
+        fontFamily: FontConstants.fontFamily,
         color: ColorManager.white,
         fontSize: 20,
-        fontWeight: FontWeight.bold,
+        fontWeight: FontWeightManager.bold,
       ),
       iconTheme: IconThemeData(color: ColorManager.goldColor),
     ),
@@ -79,7 +114,11 @@ class ThemeManager {
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: ColorManager.cardDark,
-      hintStyle: const TextStyle(color: ColorManager.gray),
+      hintStyle: const TextStyle(
+        fontFamily: FontConstants.fontFamily,
+        color: ColorManager.gray,
+        fontWeight: FontWeightManager.regular,
+      ),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12.r),
         borderSide: BorderSide.none,
@@ -106,15 +145,32 @@ class ThemeManager {
     ),
 
     textTheme: const TextTheme(
-      bodyLarge: TextStyle(color: ColorManager.white, fontSize: 16),
-      bodyMedium: TextStyle(color: ColorManager.gray, fontSize: 14),
+      bodyLarge: TextStyle(
+        fontFamily: FontConstants.fontFamily,
+        color: ColorManager.white,
+        fontSize: 16,
+        fontWeight: FontWeightManager.regular,
+      ),
+      bodyMedium: TextStyle(
+        fontFamily: FontConstants.fontFamily,
+        color: ColorManager.gray,
+        fontSize: 14,
+        fontWeight: FontWeightManager.regular,
+      ),
+      titleLarge: TextStyle(
+        fontFamily: FontConstants.fontFamily,
+        color: ColorManager.white,
+        fontSize: 20,
+        fontWeight: FontWeightManager.bold,
+      ),
+      labelLarge: TextStyle(
+        fontFamily: FontConstants.fontFamily,
+        fontWeight: FontWeightManager.medium,
+      ),
     ),
   );
 
-  /// Returns the currently stored theme data based on cached preference.
-  /// Prefer using [ThemeCubit] and [BlocBuilder] for reactive theme updates.
   static ThemeData getTheme() {
-    // Default to light; ThemeCubit will override once loaded.
     return lightTheme;
   }
 }

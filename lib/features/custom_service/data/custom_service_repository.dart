@@ -10,7 +10,16 @@ class CustomServiceRepository {
   List<dynamic> _parseList(dynamic data) {
     if (data is List) return data;
     if (data is Map<String, dynamic>) {
-      for (final key in ['results', 'data', 'items', 'offers']) {
+      for (final key in [
+        'results',
+        'data',
+        'items',
+        'offers',
+        'quotes',
+        'price_offers',
+        'custom_requests',
+        'requests',
+      ]) {
         if (data[key] is List) return data[key] as List;
       }
     }
@@ -40,13 +49,28 @@ class CustomServiceRepository {
         'address_id': payload.addressId,
       };
 
-      final imageFile = payload.imageFile;
-      if (imageFile != null) {
-        final name = imageFile.path.split(RegExp(r'[/\\]')).last;
+      if (payload.imageFiles.isNotEmpty) {
+        // Separate MultipartFile instances — reusing the same instance
+        // in both `image` and `images` causes "already been finalized".
+        final first = payload.imageFiles.first;
+        final firstName = first.path.split(RegExp(r'[/\\]')).last;
         map['image'] = await MultipartFile.fromFile(
-          imageFile.path,
-          filename: name.isNotEmpty ? name : 'image.jpg',
+          first.path,
+          filename: firstName.isNotEmpty ? firstName : 'image.jpg',
         );
+
+        final images = <MultipartFile>[];
+        for (var i = 0; i < payload.imageFiles.length; i++) {
+          final file = payload.imageFiles[i];
+          final name = file.path.split(RegExp(r'[/\\]')).last;
+          images.add(
+            await MultipartFile.fromFile(
+              file.path,
+              filename: name.isNotEmpty ? name : 'image_$i.jpg',
+            ),
+          );
+        }
+        map['images'] = images;
       }
 
       final response = await DioHelper.postMultipart(
@@ -58,9 +82,11 @@ class CustomServiceRepository {
           ServerFailure.extractApiMessage(response.data),
         );
       }
-      final data = response.data is Map<String, dynamic>
+      final raw = response.data is Map<String, dynamic>
           ? response.data as Map<String, dynamic>
           : <String, dynamic>{};
+      final nested = raw['data'];
+      final data = nested is Map<String, dynamic> ? nested : raw;
       return CustomRequest.fromJson(data);
     } on DioException catch (e) {
       throw ServerFailure.fromDioError(e);
@@ -103,9 +129,16 @@ class CustomServiceRepository {
       final response = await DioHelper.getData(
         url: AppConstants.customRequestDetail(requestId),
       );
-      final data = response.data is Map<String, dynamic>
+      final raw = response.data is Map<String, dynamic>
           ? response.data as Map<String, dynamic>
           : <String, dynamic>{};
+      final nested = raw['data'];
+      final data = nested is Map<String, dynamic>
+          ? Map<String, dynamic>.from(nested)
+          : Map<String, dynamic>.from(raw);
+      if (data['offers'] == null && raw['offers'] != null) {
+        data['offers'] = raw['offers'];
+      }
       return CustomRequest.fromJson(data);
     } on DioException catch (e) {
       throw ServerFailure.fromDioError(e);
@@ -148,6 +181,27 @@ class CustomServiceRepository {
         return getCustomRequestDetail(requestId);
       }
       return CustomRequest.fromJson(data);
+    } on DioException catch (e) {
+      throw ServerFailure.fromDioError(e);
+    }
+  }
+
+  Future<void> rejectOffer({
+    required String requestId,
+    required String offerId,
+  }) async {
+    try {
+      final response = await DioHelper.postData(
+        url: AppConstants.rejectCustomOffer(requestId, offerId),
+        data: const {},
+      );
+      if (response.statusCode != 200 &&
+          response.statusCode != 201 &&
+          response.statusCode != 204) {
+        throw ServerFailure(
+          ServerFailure.extractApiMessage(response.data),
+        );
+      }
     } on DioException catch (e) {
       throw ServerFailure.fromDioError(e);
     }

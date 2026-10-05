@@ -2,72 +2,50 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:page_transition/page_transition.dart';
 
 import '../../../app/functions.dart';
+import '../../../core/constants/assets_manager.dart';
+import '../../../core/constants/locale_keys.dart';
 import '../../../core/constants/mosaed_colors.dart';
 import '../../../core/constants/styles_manager.dart';
-import '../../../core/network/failure.dart';
-import '../../../core/widgets/mosaed_dropdown.dart';
 import '../../../core/widgets/service_thumbnail.dart';
+import '../../auth/presentation/widgets/mosaed_buttons.dart';
 import '../data/models/existed_service.dart';
 import '../data/services_repository.dart';
+import 'cubit/service_detail_cubit.dart';
 import 'service_booking_screen.dart';
+import 'widgets/service_detail_tabs.dart';
+import 'widgets/service_info_row.dart';
+import 'widgets/service_work_gallery.dart';
 
-class ServiceDetailScreen extends StatefulWidget {
+class ServiceDetailScreen extends StatelessWidget {
   const ServiceDetailScreen({super.key, required this.serviceId});
 
   final String serviceId;
 
   @override
-  State<ServiceDetailScreen> createState() => _ServiceDetailScreenState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (context) =>
+          ServiceDetailCubit(context.read<ServicesRepository>())..load(serviceId),
+      child: _ServiceDetailView(serviceId: serviceId),
+    );
+  }
 }
 
-class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
-  ExistedServiceDetail? _detail;
-  List<ServicePreviousWork> _previousWorks = [];
-  String? _selectedAttributeId;
-  bool _descriptionExpanded = false;
-  bool _loading = true;
+class _ServiceDetailView extends StatefulWidget {
+  const _ServiceDetailView({required this.serviceId});
+
+  final String serviceId;
 
   @override
-  void initState() {
-    super.initState();
-    _load();
-  }
+  State<_ServiceDetailView> createState() => _ServiceDetailViewState();
+}
 
-  Future<void> _load() async {
-    setState(() => _loading = true);
-    try {
-      final repo = context.read<ServicesRepository>();
-      final results = await Future.wait([
-        repo.getServiceDetail(widget.serviceId),
-        repo.getServicePreviousWorks(widget.serviceId),
-      ]);
-      if (!mounted) return;
-      final detail = results[0] as ExistedServiceDetail;
-      setState(() {
-        _detail = detail;
-        _previousWorks = results[1] as List<ServicePreviousWork>;
-        if (detail.attributes.isNotEmpty) {
-          _selectedAttributeId = detail.attributes.first.id;
-        }
-        _descriptionExpanded = false;
-        _loading = false;
-      });
-    } on ServerFailure catch (e) {
-      if (mounted) {
-        setState(() => _loading = false);
-        AppFunctions.showsToast(e.errMessage, MosaedColors.danger, context);
-        Navigator.pop(context);
-      }
-    } catch (_) {
-      if (mounted) {
-        setState(() => _loading = false);
-        Navigator.pop(context);
-      }
-    }
-  }
+class _ServiceDetailViewState extends State<_ServiceDetailView> {
+  int _selectedTab = 0;
 
   void _openBooking() {
     AppFunctions.navigateTo(
@@ -77,323 +55,212 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
     );
   }
 
-  ServiceAttribute? get _selectedAttribute {
-    final attrs = _detail?.attributes ?? [];
-    if (_selectedAttributeId == null) return null;
-    for (final attr in attrs) {
-      if (attr.id == _selectedAttributeId) return attr;
-    }
-    return null;
+  String _warrantyLabel(ServiceWarranty? warranty) {
+    if (warranty == null) return '—';
+    return '${warranty.durationValue} ${warranty.durationType}';
   }
 
-  void _onAttributeSelected(String? value) {
-    if (value == null) return;
-    setState(() {
-      _selectedAttributeId = value;
-      _descriptionExpanded = false;
-    });
-  }
-
-  void _showPreviousWorks() {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: MosaedColors.surfaceWhite,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
-      ),
-      builder: (context) => DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.7,
-        maxChildSize: 0.92,
-        builder: (_, controller) => Padding(
-          padding: EdgeInsets.fromLTRB(20.w, 12.h, 20.w, 24.h),
-          child: Column(
-            children: [
-              Container(
-                width: 40.w,
-                height: 4.h,
-                decoration: BoxDecoration(
-                  color: MosaedColors.border,
-                  borderRadius: BorderRadius.circular(4.r),
-                ),
-              ),
-              SizedBox(height: 16.h),
-              Text(
-                'mosaedPreviousWorks'.tr(),
-                style: getBoldStyle(
-                  fontSize: 18.sp,
-                  color: MosaedColors.textPrimary,
-                ),
-              ),
-              SizedBox(height: 16.h),
-              Expanded(
-                child: _previousWorks.isEmpty
-                    ? Center(
-                        child: Text(
-                          'mosaedNoPreviousWorks'.tr(),
-                          style: getRegularStyle(
-                            fontSize: 14.sp,
-                            color: MosaedColors.textSecondary,
-                          ),
-                        ),
-                      )
-                    : ListView.builder(
-                        controller: controller,
-                        itemCount: _previousWorks.length,
-                        itemBuilder: (_, i) =>
-                            _previousWorkCard(_previousWorks[i]),
-                      ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+  String _descriptionText(ExistedServiceDetail detail) {
+    final attr = detail.attributes.isNotEmpty ? detail.attributes.first : null;
+    final fromAttr = attr?.details?.trim();
+    if (fromAttr != null && fromAttr.isNotEmpty) return fromAttr;
+    final fromDetail = detail.details?.trim();
+    if (fromDetail != null && fromDetail.isNotEmpty) return fromDetail;
+    return detail.title;
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_loading || _detail == null) {
-      return Scaffold(
-        backgroundColor: MosaedColors.background,
-        appBar: _topBar(),
-        body: const Center(
-          child: CircularProgressIndicator(color: MosaedColors.primaryContainer),
-        ),
-      );
-    }
+    return BlocListener<ServiceDetailCubit, ServiceDetailState>(
+      listenWhen: (previous, current) => current is ServiceDetailFailure,
+      listener: (context, state) {
+        if (state is ServiceDetailFailure) {
+          AppFunctions.showsToast(state.message, MosaedColors.danger, context);
+          Navigator.pop(context);
+        }
+      },
+      child: BlocBuilder<ServiceDetailCubit, ServiceDetailState>(
+        builder: (context, state) {
+          if (state is ServiceDetailLoading || state is ServiceDetailInitial) {
+            return Scaffold(
+              backgroundColor: MosaedColors.surfaceWhite,
+              appBar: _topBar(),
+              body: const Center(
+                child: CircularProgressIndicator(
+                  color: MosaedColors.primaryContainer,
+                ),
+              ),
+            );
+          }
 
-    final detail = _detail!;
-    final currency = 'mosaedCurrency'.tr();
+          if (state is! ServiceDetailLoaded) {
+            return Scaffold(
+              backgroundColor: MosaedColors.surfaceWhite,
+              appBar: _topBar(),
+              body: const SizedBox.shrink(),
+            );
+          }
 
-    return Scaffold(
-      backgroundColor: MosaedColors.background,
-      appBar: _topBar(),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.fromLTRB(20.w, 8.h, 20.w, 32.h),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _heroImage(detail),
-            SizedBox(height: 20.h),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          final detail = state.detail;
+          final previousWorks = state.previousWorks;
+          final description = _descriptionText(detail);
+
+          return Scaffold(
+            backgroundColor: MosaedColors.surfaceWhite,
+            appBar: _topBar(),
+            body: Column(
               children: [
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        detail.title,
-                        style: getBoldStyle(
-                          fontSize: 22.sp,
-                          color: MosaedColors.textPrimary,
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 16.h),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _heroImage(detail),
+                        SizedBox(height: 16.h),
+                        ServiceDetailTabs(
+                          selectedIndex: _selectedTab,
+                          onChanged: (index) =>
+                              setState(() => _selectedTab = index),
                         ),
-                      ),
-                      SizedBox(height: 4.h),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.star_rounded,
-                            size: 16.sp,
-                            color: MosaedColors.primaryContainer,
+                        SizedBox(height: 16.h),
+                        if (_selectedTab == 0)
+                          _buildDetailsTab(detail, description)
+                        else
+                          ServiceWorkGallery(
+                            serviceTitle: detail.title,
+                            works: previousWorks,
                           ),
-                          SizedBox(width: 4.w),
-                          Text(
-                            '4.8 (120 ${'mosaedReviews'.tr()})',
-                            style: getRegularStyle(
-                              fontSize: 13.sp,
-                              color: MosaedColors.primary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                Material(
-                  color: MosaedColors.primaryContainer,
-                  borderRadius: BorderRadius.circular(14.r),
-                  elevation: 2,
-                  shadowColor: Colors.black.withValues(alpha: 0.08),
-                  child: InkWell(
-                    onTap: _openBooking,
-                    borderRadius: BorderRadius.circular(14.r),
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 16.w,
-                        vertical: 10.h,
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.add_rounded, color: Colors.white, size: 18.sp),
-                          SizedBox(width: 4.w),
-                          Text(
-                            'mosaedRequestService'.tr(),
-                            style: getBoldStyle(fontSize: 13.sp, color: Colors.white),
-                          ),
-                        ],
-                      ),
+                      ],
                     ),
                   ),
                 ),
+                _bottomBar(),
               ],
             ),
-            if (detail.details != null && detail.details!.trim().isNotEmpty) ...[
-              SizedBox(height: 16.h),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildDetailsTab(ExistedServiceDetail detail, String description) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          detail.title,
+          style: getBoldStyle(
+            fontSize: 17.sp,
+            color: MosaedColors.textPrimary,
+          ),
+        ),
+        SizedBox(height: 8.h),
+        Text(
+          description,
+          style: getRegularStyle(
+            fontSize: 13.sp,
+            color: MosaedColors.textSecondary,
+            height: 1.55,
+          ),
+        ),
+        SizedBox(height: 16.h),
+        Container(
+          width: double.infinity,
+          padding: EdgeInsets.fromLTRB(14.w, 14.h, 14.w, 8.h),
+          decoration: BoxDecoration(
+            color: MosaedColors.surfaceWhite,
+            borderRadius: BorderRadius.circular(14.r),
+            border: Border.all(color: MosaedColors.fieldBorder),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
               Text(
-                detail.details!,
-                style: getRegularStyle(
-                  fontSize: 14.sp,
-                  color: MosaedColors.textSecondary,
-                  height: 1.6,
-                ),
-              ),
-            ],
-            if (detail.attributes.isNotEmpty) ...[
-              SizedBox(height: 24.h),
-              Text(
-                'mosaedOfferedServices'.tr(),
+                LocaleKeys.mosaedServiceDetails.tr(),
                 style: getBoldStyle(
-                  fontSize: 18.sp,
-                  color: MosaedColors.textPrimary,
+                  fontSize: 14.sp,
+                  color: MosaedColors.brand,
                 ),
               ),
-              SizedBox(height: 10.h),
-              Container(
-                decoration: BoxDecoration(
-                  color: MosaedColors.surfaceWhite,
-                  borderRadius: BorderRadius.circular(14.r),
-                  border: Border.all(
-                    color: MosaedColors.outlineVariant.withValues(alpha: 0.3),
-                  ),
-                  boxShadow: MosaedColors.softShadow,
-                ),
-                child: MosaedDropdown<String>(
-                  title: '',
-                  hint: 'mosaedSelectAttribute'.tr(),
-                  icon: Icons.tune_rounded,
-                  selectedValue: _selectedAttributeId,
-                  items: detail.attributes
-                      .map(
-                        (attr) => MosaedDropdownItem(
-                          value: attr.id,
-                          label: attr.name,
-                        ),
-                      )
-                      .toList(),
-                  onSelected: _onAttributeSelected,
-                ),
+              ServiceInfoRow(
+                svgAsset: ImageAssets.note01,
+                label: 'mosaedAttributeName'.tr(),
+                value: detail.title,
               ),
-              if (_selectedAttribute != null) ...[
-                SizedBox(height: 14.h),
-                _attributeSummaryCard(_selectedAttribute!),
+              Divider(height: 1, thickness: 1, color: MosaedColors.fieldBorder),
+              ServiceInfoRow(
+                svgAsset: ImageAssets.message02,
+                label: LocaleKeys.mosaedServiceDescriptionLabel.tr(),
+                value: description,
+              ),
+              if (detail.warranty != null) ...[
+                Divider(
+                  height: 1,
+                  thickness: 1,
+                  color: MosaedColors.fieldBorder,
+                ),
+                ServiceInfoRow(
+                  svgAsset: ImageAssets.checkmarkBadge01,
+                  label: LocaleKeys.mosaedWarrantyDurationLabel.tr(),
+                  value: _warrantyLabel(detail.warranty),
+                  valueColor: MosaedColors.success,
+                ),
               ],
-              SizedBox(height: 14.h),
-              Container(
-                width: double.infinity,
-                padding: EdgeInsets.all(14.w),
-                decoration: BoxDecoration(
-                  color: MosaedColors.shieldBg,
-                  borderRadius: BorderRadius.circular(14.r),
-                  border: Border.all(color: MosaedColors.border),
+            ],
+          ),
+        ),
+        SizedBox(height: 12.h),
+        Container(
+          width: double.infinity,
+          padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 12.h),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFF4E8),
+            borderRadius: BorderRadius.circular(12.r),
+            border: Border.all(color: MosaedColors.cardBorder),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SvgPicture.asset(
+                ImageAssets.note01,
+                width: 18.w,
+                height: 18.w,
+                colorFilter: const ColorFilter.mode(
+                  MosaedColors.brand,
+                  BlendMode.srcIn,
                 ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.info_outline_rounded,
-                      color: MosaedColors.primary,
-                      size: 20.sp,
-                    ),
-                    SizedBox(width: 10.w),
-                    Expanded(
-                      child: Text(
-                        'mosaedPriceSetByDashboard'.tr(),
-                        style: getMediumStyle(
-                          fontSize: 13.sp,
-                          color: MosaedColors.textPrimary,
-                        ),
-                      ),
-                    ),
-                  ],
+              ),
+              SizedBox(width: 8.w),
+              Expanded(
+                child: Text(
+                  LocaleKeys.mosaedPriceAfterInspection.tr(),
+                  style: getMediumStyle(
+                    fontSize: 12.sp,
+                    color: MosaedColors.textPrimary,
+                    height: 1.45,
+                  ),
                 ),
               ),
             ],
-            if (detail.warranty != null) ...[
-              SizedBox(height: 20.h),
-              Container(
-                padding: EdgeInsets.all(16.w),
-                decoration: BoxDecoration(
-                  color: MosaedColors.successBg,
-                  borderRadius: BorderRadius.circular(14.r),
-                  border: Border.all(
-                    color: MosaedColors.success.withValues(alpha: 0.2),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 28.w,
-                      height: 28.w,
-                      decoration: const BoxDecoration(
-                        color: MosaedColors.success,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(Icons.check_rounded, color: Colors.white, size: 16.sp),
-                    ),
-                    SizedBox(width: 10.w),
-                    Expanded(
-                      child: Text(
-                        'mosaedWarranty'.tr(),
-                        style: getMediumStyle(
-                          fontSize: 14.sp,
-                          color: const Color(0xFF166534),
-                        ),
-                      ),
-                    ),
-                    Text(
-                      '${detail.warranty!.durationValue} ${detail.warranty!.durationType}',
-                      style: getBoldStyle(
-                        fontSize: 16.sp,
-                        color: const Color(0xFF15803D),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-            SizedBox(height: 24.h),
-            Text(
-              'mosaedPreviousWorks'.tr(),
-              style: getBoldStyle(
-                fontSize: 18.sp,
-                color: MosaedColors.textPrimary,
-              ),
-            ),
-            SizedBox(height: 12.h),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: _previousWorks.isEmpty ? null : _showPreviousWorks,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: MosaedColors.primary,
-                  disabledBackgroundColor: MosaedColors.border,
-                  padding: EdgeInsets.symmetric(vertical: 14.h),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14.r),
-                  ),
-                  elevation: 2,
-                ),
-                icon: Icon(Icons.visibility_rounded, color: Colors.white, size: 20.sp),
-                label: Text(
-                  'mosaedViewPreviousWorks'.tr(),
-                  style: getBoldStyle(fontSize: 14.sp, color: Colors.white),
-                ),
-              ),
-            ),
-          ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _bottomBar() {
+    return Container(
+      padding: EdgeInsets.fromLTRB(16.w, 10.h, 16.w, 12.h),
+      decoration: BoxDecoration(
+        color: MosaedColors.surfaceWhite,
+        border: Border(top: BorderSide(color: MosaedColors.fieldBorder)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: MosaedPrimaryButton(
+          text: '+ ${'mosaedRequestService'.tr()}',
+          onPressed: _openBooking,
         ),
       ),
     );
@@ -405,177 +272,38 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
       elevation: 0,
       shadowColor: Colors.black.withValues(alpha: 0.08),
       surfaceTintColor: Colors.transparent,
+      centerTitle: true,
+      title: Text(
+        LocaleKeys.mosaedOrderDetailsTab.tr(),
+        style: getBoldStyle(
+          fontSize: 16.sp,
+          color: MosaedColors.textPrimary,
+        ),
+      ),
       leading: IconButton(
         onPressed: () => Navigator.pop(context),
         icon: Icon(
-          Icons.arrow_forward_rounded,
-          color: MosaedColors.primary,
-          size: 24.sp,
+          Icons.arrow_back_ios_new_rounded,
+          color: MosaedColors.textPrimary,
+          size: 18.sp,
         ),
       ),
-      title: Icon(
-        Icons.home_repair_service_rounded,
-        color: MosaedColors.primary,
-        size: 28.sp,
-      ),
-      centerTitle: false,
     );
   }
 
   Widget _heroImage(ExistedServiceDetail detail) {
     return ClipRRect(
-      borderRadius: BorderRadius.circular(14.r),
+      borderRadius: BorderRadius.circular(12.r),
       child: AspectRatio(
-        aspectRatio: 16 / 9,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            detail.hasImage
-                ? Image.network(
-                    detail.image!,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => _headerFallback(detail),
-                  )
-                : _headerFallback(detail),
-            DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.bottomCenter,
-                  end: Alignment.topCenter,
-                  colors: [
-                    Colors.black.withValues(alpha: 0.4),
-                    Colors.transparent,
-                  ],
-                ),
-              ),
-            ),
-            Positioned(
-              bottom: 12.h,
-              right: 12.w,
-              child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
-                decoration: BoxDecoration(
-                  color: MosaedColors.primary,
-                  borderRadius: BorderRadius.circular(8.r),
-                  boxShadow: MosaedColors.softShadow,
-                ),
-                child: Text(
-                  'mosaedCertifiedService'.tr(),
-                  style: getMediumStyle(fontSize: 11.sp, color: Colors.white),
-                ),
-              ),
-            ),
-          ],
-        ),
+        aspectRatio: 16 / 10,
+        child: detail.hasImage
+            ? Image.network(
+                detail.image!,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => _headerFallback(detail),
+              )
+            : _headerFallback(detail),
       ),
-    );
-  }
-
-  Widget _attributeSummaryCard(ServiceAttribute attr) {
-    final hasDetails = attr.details != null && attr.details!.trim().isNotEmpty;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: MosaedColors.surfaceWhite,
-        borderRadius: BorderRadius.circular(14.r),
-        border: Border.all(
-          color: MosaedColors.outlineVariant.withValues(alpha: 0.2),
-        ),
-        boxShadow: MosaedColors.softShadow,
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        children: [
-          Container(
-            width: double.infinity,
-            padding: EdgeInsets.all(16.w),
-            color: MosaedColors.surfaceContainerLow,
-            child: Text(
-              'mosaedServiceAttributes'.tr(),
-              style: getBoldStyle(
-                fontSize: 16.sp,
-                color: MosaedColors.textPrimary,
-              ),
-            ),
-          ),
-          Padding(
-            padding: EdgeInsets.all(16.w),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _detailRow('mosaedAttributeName'.tr(), attr.name),
-                if (attr.hasUnitName) ...[
-                  SizedBox(height: 12.h),
-                  _detailRow('mosaedUnitType'.tr(), attr.unitName!),
-                ],
-                if (hasDetails) ...[
-                  SizedBox(height: 12.h),
-                  InkWell(
-                    onTap: () => setState(
-                      () => _descriptionExpanded = !_descriptionExpanded,
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            'mosaedServiceDetails'.tr(),
-                            style: getMediumStyle(
-                              fontSize: 13.sp,
-                              color: MosaedColors.textPrimary,
-                            ),
-                          ),
-                        ),
-                        Icon(
-                          _descriptionExpanded
-                              ? Icons.expand_less_rounded
-                              : Icons.expand_more_rounded,
-                          color: MosaedColors.textSecondary,
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (_descriptionExpanded)
-                    Padding(
-                      padding: EdgeInsets.only(top: 8.h),
-                      child: Align(
-                        alignment: AlignmentDirectional.centerStart,
-                        child: Text(
-                          attr.details!,
-                          style: getRegularStyle(
-                            fontSize: 13.sp,
-                            color: MosaedColors.textSecondary,
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _detailRow(String label, String value) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: getRegularStyle(
-            fontSize: 15.sp,
-            color: MosaedColors.textSecondary,
-          ),
-        ),
-        Text(
-          value,
-          style: getMediumStyle(
-            fontSize: 15.sp,
-            color: MosaedColors.textPrimary,
-          ),
-        ),
-      ],
     );
   }
 
@@ -585,62 +313,10 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
       child: Center(
         child: ServiceThumbnail(
           service: detail,
-          size: 80.w,
-          borderRadius: BorderRadius.circular(20.r),
+          size: 64.w,
+          borderRadius: BorderRadius.circular(16.r),
         ),
       ),
-    );
-  }
-
-  Widget _previousWorkCard(ServicePreviousWork work) {
-    return Container(
-      margin: EdgeInsets.only(bottom: 14.h),
-      padding: EdgeInsets.all(12.w),
-      decoration: BoxDecoration(
-        color: MosaedColors.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(14.r),
-        border: Border.all(color: MosaedColors.border),
-      ),
-      child: Row(
-        children: [
-          Expanded(child: _workImage(url: work.beforeImage, label: 'mosaedBefore'.tr())),
-          SizedBox(width: 10.w),
-          Expanded(child: _workImage(url: work.afterImage, label: 'mosaedAfter'.tr())),
-        ],
-      ),
-    );
-  }
-
-  Widget _workImage({required String url, required String label}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: getMediumStyle(fontSize: 12.sp, color: MosaedColors.textSecondary),
-        ),
-        SizedBox(height: 6.h),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(10.r),
-          child: AspectRatio(
-            aspectRatio: 3 / 4,
-            child: url.isNotEmpty
-                ? Image.network(
-                    url,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => _imagePlaceholder(),
-                  )
-                : _imagePlaceholder(),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _imagePlaceholder() {
-    return Container(
-      color: MosaedColors.inputFill,
-      child: Icon(Icons.image_not_supported_outlined, color: MosaedColors.textHint),
     );
   }
 }

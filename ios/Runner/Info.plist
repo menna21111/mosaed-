@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Mossad</string>
+	<string>مساعد</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -15,7 +15,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>mossad</string>
+	<string>مساعد</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -50,13 +50,15 @@
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>NSFaceIDUsageDescription</key>
-	<string>MOSSAD uses Face ID to securely unlock your agent profile.</string>
+	<string>يستخدم مساعد Face ID لتسجيل الدخول بشكل آمن.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Mosaed needs your location to set your service address on the map.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Mosaed needs access to your photos to attach images to custom service requests.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>Mosaed needs camera access to take photos for custom service requests.</string>
+	<string>Mosaed needs camera access to take photos for custom service requests and chat.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Mosaed needs microphone access to send voice notes in chat.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>fetch</string>

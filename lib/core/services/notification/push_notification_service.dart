@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:page_transition/page_transition.dart';
 import '../../../app/app.dart';
@@ -86,7 +87,11 @@ class PushNotificationService {
     description: _channelDescription,
     importance: Importance.max,
     playSound: true,
+    enableVibration: true,
   );
+
+  static DateTime? _lastAlertAt;
+  static String? _lastAlertKey;
 
   static void bindNotificationsRepository(NotificationsRepository repository) {
     _notificationsRepository = repository;
@@ -286,6 +291,56 @@ class PushNotificationService {
     final body = notification?.body ?? data['body']?.toString();
     if (title == null && body == null) return;
 
+    await showIncomingAlert(
+      title: title,
+      body: body,
+      payload: data['route']?.toString() ?? '',
+      id: notification?.hashCode ?? Object.hash(title, body),
+    );
+  }
+
+  /// Sound + vibration for in-app WebSocket notifications.
+  static Future<void> notifyFromSocket({
+    String? title,
+    String? body,
+    String payload = '',
+  }) async {
+    try {
+      await HapticFeedback.heavyImpact();
+      await HapticFeedback.vibrate();
+      await SystemSound.play(SystemSoundType.alert);
+    } catch (_) {}
+
+    final hasText =
+        (title != null && title.isNotEmpty) || (body != null && body.isNotEmpty);
+    if (!hasText) return;
+    if (!await NotificationManager.isNotificationsEnabled()) return;
+
+    await showIncomingAlert(
+      title: title,
+      body: body,
+      payload: payload,
+    );
+  }
+
+  static Future<void> showIncomingAlert({
+    String? title,
+    String? body,
+    String payload = '',
+    int? id,
+  }) async {
+    if (title == null && body == null) return;
+
+    final key = '${title ?? ''}|${body ?? ''}';
+    final now = DateTime.now();
+    if (_lastAlertKey == key &&
+        _lastAlertAt != null &&
+        now.difference(_lastAlertAt!) < const Duration(milliseconds: 1200)) {
+      return;
+    }
+    _lastAlertKey = key;
+    _lastAlertAt = now;
+
     const androidDetails = AndroidNotificationDetails(
       _channelId,
       _channelName,
@@ -293,6 +348,7 @@ class PushNotificationService {
       importance: Importance.max,
       priority: Priority.high,
       playSound: true,
+      enableVibration: true,
     );
 
     const iosDetails = DarwinNotificationDetails(
@@ -304,13 +360,17 @@ class PushNotificationService {
     const details =
         NotificationDetails(android: androidDetails, iOS: iosDetails);
 
-    await _localNotificationsPlugin.show(
-      notification?.hashCode ?? Object.hash(title, body),
-      title,
-      body,
-      details,
-      payload: data['route']?.toString() ?? '',
-    );
+    try {
+      await _localNotificationsPlugin.show(
+        id ?? Object.hash(title, body, DateTime.now().millisecondsSinceEpoch),
+        title,
+        body,
+        details,
+        payload: payload,
+      );
+    } catch (e) {
+      debugPrint('Local notification failed: $e');
+    }
   }
 
   static void _handleRemoteMessageNavigation(RemoteMessage message) {

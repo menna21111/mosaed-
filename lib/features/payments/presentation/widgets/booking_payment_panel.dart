@@ -7,6 +7,7 @@ import 'package:page_transition/page_transition.dart';
 import '../../../../app/functions.dart';
 import '../../../../core/constants/mosaed_colors.dart';
 import '../../../../core/constants/styles_manager.dart';
+import '../../../../core/widgets/mosaed_price_text.dart';
 import '../../../auth/presentation/widgets/mosaed_buttons.dart';
 import '../cubit/payment_cubit.dart';
 import '../payment_checkout_webview.dart';
@@ -131,8 +132,14 @@ class BookingPaymentPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final currency = 'mosaedCurrency'.tr();
     final showAmount = amount > 0;
+    final amountStyle = getBoldStyle(
+      fontSize: showAmount ? 24.sp : 14.sp,
+      color: MosaedColors.primary,
+    );
+    final amountWidget = showAmount
+        ? MosaedPriceText(amount: amount, style: amountStyle)
+        : Text('mosaedPriceSetByDashboard'.tr(), style: amountStyle);
 
     return BlocConsumer<PaymentCubit, PaymentState>(
       listener: (context, state) {
@@ -150,9 +157,7 @@ class BookingPaymentPanel extends StatelessWidget {
         if (_awaitingCash) {
           return _shell(
             statusLabel: 'mosaedPaymentStatusAwaitingCash'.tr(),
-            amountLabel: showAmount
-                ? '${amount.toStringAsFixed(0)} $currency'
-                : 'mosaedPriceSetByDashboard'.tr(),
+            amount: amountWidget,
             child: _infoBanner(
               icon: Icons.hourglass_top_rounded,
               text: 'mosaedPaymentAwaitingProviderCash'.tr(),
@@ -164,9 +169,7 @@ class BookingPaymentPanel extends StatelessWidget {
         if (_awaitingOnline) {
           return _shell(
             statusLabel: 'mosaedPaymentStatusAwaitingOnline'.tr(),
-            amountLabel: showAmount
-                ? '${amount.toStringAsFixed(0)} $currency'
-                : 'mosaedPriceSetByDashboard'.tr(),
+            amount: amountWidget,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -192,9 +195,7 @@ class BookingPaymentPanel extends StatelessWidget {
 
         return _shell(
           statusLabel: 'mosaedPaymentStatusSelectMethod'.tr(),
-          amountLabel: showAmount
-              ? '${amount.toStringAsFixed(0)} $currency'
-              : 'mosaedPriceSetByDashboard'.tr(),
+          amount: amountWidget,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -249,7 +250,7 @@ class BookingPaymentPanel extends StatelessWidget {
 
   Widget _shell({
     required String statusLabel,
-    required String amountLabel,
+    required Widget amount,
     required Widget child,
   }) {
     return Container(
@@ -299,13 +300,7 @@ class BookingPaymentPanel extends StatelessWidget {
             ],
           ),
           SizedBox(height: 12.h),
-          Text(
-            amountLabel,
-            style: getBoldStyle(
-              fontSize: amount > 0 ? 24.sp : 14.sp,
-              color: MosaedColors.primary,
-            ),
-          ),
+          amount,
           SizedBox(height: 14.h),
           child,
         ],

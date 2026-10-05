@@ -3,12 +3,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
+import 'package:flutter_svg/flutter_svg.dart';
+
+import '../../../core/constants/assets_manager.dart';
+import '../../../core/constants/locale_keys.dart';
 import '../../../core/constants/mosaed_colors.dart';
 import '../../../core/constants/styles_manager.dart';
 import '../../notifications/presentation/cubit/notification_cubit.dart';
+import '../../profile/presentation/profile_tab.dart';
+import 'chats_tab.dart';
 import 'home_tab.dart';
 import 'orders_tab.dart';
-import 'profile_tab.dart';
 
 class MainShell extends StatefulWidget {
   const MainShell({super.key, this.initialIndex = 0});
@@ -26,6 +31,7 @@ class _MainShellState extends State<MainShell> {
   late final List<Widget> _pages = [
     const HomeTab(),
     OrdersTab(key: _ordersKey),
+    const ChatsTab(),
     const ProfileTab(),
   ];
 
@@ -45,45 +51,42 @@ class _MainShellState extends State<MainShell> {
     return Scaffold(
       backgroundColor: MosaedColors.background,
       body: IndexedStack(index: _index, children: _pages),
-      bottomNavigationBar: Container(
+      bottomNavigationBar: DecoratedBox(
         decoration: BoxDecoration(
           color: MosaedColors.surfaceWhite,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 20,
-              offset: const Offset(0, -4),
-            ),
-          ],
           border: Border(
-            top: BorderSide(
-              color: MosaedColors.surfaceContainerLow,
-            ),
+            top: BorderSide(color: MosaedColors.fieldBorder, width: 0.5),
           ),
         ),
         child: SafeArea(
+          top: false,
           child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 8.h),
+            padding: EdgeInsets.only(top: 6, bottom: 2),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _NavItem(
-                  icon: Icons.home_rounded,
+                  asset: ImageAssets.elements1,
                   label: 'home'.tr(),
                   selected: _index == 0,
                   onTap: () => setState(() => _index = 0),
                 ),
                 _NavItem(
-                  icon: Icons.build_rounded,
-                  label: 'mosaedOrders'.tr(),
+                  asset: ImageAssets.taskIcon,
+                  label: LocaleKeys.mosaedMyOrders.tr(),
                   selected: _index == 1,
                   onTap: () => setState(() => _index = 1),
                 ),
                 _NavItem(
-                  icon: Icons.person_rounded,
-                  label: 'profile'.tr(),
+                  asset: ImageAssets.icon1,
+                  label: LocaleKeys.mosaedMyChats.tr(),
                   selected: _index == 2,
                   onTap: () => setState(() => _index = 2),
+                ),
+                _NavItem(
+                  asset: ImageAssets.icon2,
+                  label: LocaleKeys.mosaedMore.tr(),
+                  selected: _index == 3,
+                  onTap: () => setState(() => _index = 3),
                 ),
               ],
             ),
@@ -96,46 +99,44 @@ class _MainShellState extends State<MainShell> {
 
 class _NavItem extends StatelessWidget {
   const _NavItem({
-    required this.icon,
+    required this.asset,
     required this.label,
     required this.selected,
     required this.onTap,
   });
 
-  final IconData icon;
+  final String asset;
   final String label;
   final bool selected;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(14.r),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-        decoration: BoxDecoration(
-          color: selected ? MosaedColors.primaryContainer : Colors.transparent,
-          borderRadius: BorderRadius.circular(14.r),
-        ),
+    final color =
+        selected ? MosaedColors.brand : MosaedColors.textSecondary;
+
+    return Expanded(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              icon,
-              size: 22.sp,
-              color: selected ? MosaedColors.onPrimaryContainer : MosaedColors.textSecondary,
+            SvgPicture.asset(
+              asset,
+              width: 20,
+              height: 20,
+              colorFilter: ColorFilter.mode(
+               selected ? MosaedColors.brand : color,
+                BlendMode.srcIn,
+              ),
             ),
-            SizedBox(height: 2.h),
+            const SizedBox(height: 2),
             Text(
               label,
-              style: getMediumStyle(
-                fontSize: 11.sp,
-                color: selected
-                    ? MosaedColors.onPrimaryContainer
-                    : MosaedColors.textSecondary,
-              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: getMediumStyle(fontSize: 10.sp, color: color),
             ),
           ],
         ),

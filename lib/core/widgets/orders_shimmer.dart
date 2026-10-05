@@ -20,7 +20,7 @@ class OrdersShimmer extends StatelessWidget {
         baseColor: baseColor,
         highlightColor: highlightColor,
         child: Container(
-          height: 110.h,
+          height: 100.h,
           decoration: BoxDecoration(
             color: MosaedColors.surface,
             borderRadius: BorderRadius.circular(16.r),

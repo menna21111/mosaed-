@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:equatable/equatable.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -8,6 +10,7 @@ import '../../../../core/constants/mosaed_colors.dart';
 import '../../../../core/network/failure.dart';
 import '../../../../core/realtime/chat_session_registry.dart';
 import '../../../../core/realtime/notification_socket_service.dart';
+import '../../../../core/services/notification/push_notification_service.dart';
 import '../../data/models/app_notification.dart';
 import '../../data/notifications_repository.dart';
 
@@ -181,6 +184,13 @@ class NotificationCubit extends Cubit<NotificationState> {
     }
 
     _showToast(payload);
+    unawaited(
+      PushNotificationService.notifyFromSocket(
+        title: payload['title']?.toString(),
+        body: payload['body']?.toString(),
+        payload: payload['route']?.toString() ?? '',
+      ),
+    );
 
     if (_orderRefreshEvents.contains(event)) {
       onOrdersChanged?.call();

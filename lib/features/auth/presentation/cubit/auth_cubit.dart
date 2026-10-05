@@ -1,7 +1,10 @@
+import 'dart:io';
+
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/network/failure.dart';
+import '../../../../core/services/biometric_service.dart';
 import '../../../../core/services/notification/push_notification_service.dart';
 
 import '../../data/auth_repository.dart';
@@ -75,6 +78,8 @@ class AuthCubit extends Cubit<AuthState> {
       emit(AuthVerified(session: session));
       // ignore: unawaited_futures
       PushNotificationService.syncTokenWithBackend();
+    } on BiometricCancelledException {
+      emit(const AuthInitial());
     } on ServerFailure catch (e) {
       emit(AuthFailure(e.errMessage));
     } catch (_) {
@@ -104,6 +109,35 @@ class AuthCubit extends Cubit<AuthState> {
       emit(ProfileFailure(e.errMessage));
     } catch (_) {
       emit(const ProfileFailure('حدث خطأ غير متوقع'));
+    }
+  }
+
+  Future<CustomerProfile> updateProfile({
+    required String name,
+    required String phoneNumber,
+    String? email,
+    File? photo,
+  }) async {
+    final profile = await _repository.updateProfile(
+      name: name,
+      phoneNumber: phoneNumber,
+      email: email,
+      photo: photo,
+    );
+    emit(ProfileLoaded(profile: profile));
+    return profile;
+  }
+
+  Future<void> deleteAccount() async {
+    emit(const AuthLoading());
+    try {
+      await PushNotificationService.removeTokenFromBackend();
+      await _repository.deleteAccount();
+      emit(const AuthLoggedOut());
+    } on ServerFailure catch (e) {
+      emit(AuthFailure(e.errMessage));
+    } catch (_) {
+      emit(const AuthFailure('حدث خطأ غير متوقع'));
     }
   }
 

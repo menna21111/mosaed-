@@ -7,6 +7,7 @@ import 'package:page_transition/page_transition.dart';
 import '../../../../app/functions.dart';
 import '../../../../core/constants/mosaed_colors.dart';
 import '../../../../core/constants/styles_manager.dart';
+import '../../../../core/widgets/mosaed_price_text.dart';
 import '../../../auth/presentation/widgets/mosaed_buttons.dart';
 import '../../data/models/payment_request.dart';
 import '../cubit/payment_cubit.dart';
@@ -37,7 +38,6 @@ class _PaymentStatusSectionState extends State<PaymentStatusSection> {
   late PaymentRequest _payment;
 
   PaymentRequest get payment => _payment;
-  String get _currency => 'mosaedCurrency'.tr();
 
   @override
   void initState() {
@@ -194,14 +194,15 @@ class _PaymentStatusSectionState extends State<PaymentStatusSection> {
             ),
           ],
           SizedBox(height: 12.h),
-          Text(
-            '${displayAmount.toStringAsFixed(0)} $_currency',
+          MosaedPriceText(
+            amount: displayAmount,
             style: getBoldStyle(fontSize: 24.sp, color: MosaedColors.primary),
           ),
           if (payment.hasPointsApplied) ...[
             SizedBox(height: 4.h),
-            Text(
-              '${'mosaedOriginalAmount'.tr()}: ${payment.amount.toStringAsFixed(0)} $_currency',
+            MosaedPriceText(
+              amount: payment.amount,
+              prefix: '${'mosaedOriginalAmount'.tr()}: ',
               style: getRegularStyle(
                 fontSize: 12.sp,
                 color: MosaedColors.textSecondary,

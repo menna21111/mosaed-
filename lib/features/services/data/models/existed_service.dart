@@ -19,10 +19,20 @@ class ExistedService {
     return ExistedService(
       id: json['id']?.toString() ?? '',
       title: json['title']?.toString() ?? '',
-      image: json['image']?.toString(),
+      image: _imageFrom(json),
       date: json['date']?.toString(),
       isActive: json['is_active'] == true,
     );
+  }
+
+  static String? _imageFrom(Map<String, dynamic> json) {
+    for (final key in ['image', 'icon', 'image_url', 'photo', 'thumbnail']) {
+      final value = json[key]?.toString().trim();
+      if (value != null && value.isNotEmpty && value.toLowerCase() != 'null') {
+        return value;
+      }
+    }
+    return null;
   }
 
   bool get hasImage =>
@@ -233,6 +243,16 @@ class ServicePreviousWork {
       createdAt: json['created_at']?.toString(),
     );
   }
+}
+
+class ServiceDetailBundle {
+  const ServiceDetailBundle({
+    required this.detail,
+    required this.previousWorks,
+  });
+
+  final ExistedServiceDetail detail;
+  final List<ServicePreviousWork> previousWorks;
 }
 
 class ServiceProvider {

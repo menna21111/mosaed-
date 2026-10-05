@@ -2,8 +2,10 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../../app/functions.dart';
+import '../../../core/constants/assets_manager.dart';
 import '../../../core/constants/mosaed_colors.dart';
 import '../../../core/constants/styles_manager.dart';
 import '../../auth/presentation/widgets/mosaed_buttons.dart';
@@ -67,10 +69,11 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> {
                   color: MosaedColors.successBg,
                   shape: BoxShape.circle,
                 ),
-                child: Icon(
-                  Icons.check_circle_rounded,
-                  color: MosaedColors.success,
-                  size: 56.sp,
+                alignment: Alignment.center,
+                child: SvgPicture.asset(
+                  ImageAssets.checkmarkCircle03,
+                  width: 56.w,
+                  height: 56.w,
                 ),
               ),
               SizedBox(height: 24.h),

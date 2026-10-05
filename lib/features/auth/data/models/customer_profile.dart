@@ -6,6 +6,8 @@ class CustomerProfile {
     required this.name,
     required this.phoneNumber,
     this.email,
+    this.avatar,
+    this.gender,
     required this.addresses,
     required this.isPhoneVerified,
     this.createdAt,
@@ -15,6 +17,8 @@ class CustomerProfile {
   final String name;
   final String phoneNumber;
   final String? email;
+  final String? avatar;
+  final String? gender;
   final List<CustomerAddress> addresses;
   final bool isPhoneVerified;
   final String? createdAt;
@@ -40,6 +44,10 @@ class CustomerProfile {
       name: json['name']?.toString() ?? '',
       phoneNumber: json['phone_number']?.toString() ?? '',
       email: json['email']?.toString(),
+      avatar: json['avatar']?.toString() ??
+          json['image']?.toString() ??
+          json['photo']?.toString(),
+      gender: json['gender']?.toString(),
       addresses: addresses,
       isPhoneVerified: json['is_phone_verified'] == true,
       createdAt: json['created_at']?.toString(),

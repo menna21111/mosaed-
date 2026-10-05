@@ -69,6 +69,20 @@ class PointsTransaction {
   final String? description;
   final String? createdAt;
 
+  bool get isEarn {
+    final t = (type ?? '').toLowerCase();
+    if (t.contains('redeem') ||
+        t.contains('spend') ||
+        t.contains('use') ||
+        t.contains('debit')) {
+      return false;
+    }
+    if (t.contains('earn') || t.contains('credit') || t.contains('gain')) {
+      return true;
+    }
+    return points >= 0;
+  }
+
   factory PointsTransaction.fromJson(Map<String, dynamic> json) {
     return PointsTransaction(
       id: json['id']?.toString() ?? '',

@@ -3,12 +3,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
+import '../../../core/constants/assets_manager.dart';
+import '../../../core/constants/locale_keys.dart';
 import '../../../core/constants/mosaed_colors.dart';
 import '../../../core/constants/styles_manager.dart';
+import '../../home/presentation/widgets/more_card_tile.dart';
+import '../../services/presentation/widgets/address_chrome.dart';
 import '../data/models/customer_points_wallet.dart';
 import '../data/payments_repository.dart';
+import 'points_history_screen.dart';
+import 'points_rules_screen.dart';
 
-/// محفظة نقاط العميل — تفتح من البروفايل.
 class PointsWalletScreen extends StatefulWidget {
   const PointsWalletScreen({super.key});
 
@@ -19,7 +24,6 @@ class PointsWalletScreen extends StatefulWidget {
 class _PointsWalletScreenState extends State<PointsWalletScreen> {
   CustomerPointsWallet? _wallet;
   bool _loading = true;
-  String? _error;
 
   @override
   void initState() {
@@ -28,13 +32,9 @@ class _PointsWalletScreenState extends State<PointsWalletScreen> {
   }
 
   Future<void> _load() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
+    setState(() => _loading = true);
     try {
-      final wallet =
-          await context.read<PaymentsRepository>().getPointsWallet();
+      final wallet = await context.read<PaymentsRepository>().getPointsWallet();
       if (!mounted) return;
       setState(() {
         _wallet = wallet;
@@ -43,281 +43,155 @@ class _PointsWalletScreenState extends State<PointsWalletScreen> {
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _wallet = null;
+        _wallet = const CustomerPointsWallet(
+          pointsBalance: 0,
+          totalEarnedPoints: 0,
+          totalRedeemedPoints: 0,
+        );
         _loading = false;
-        _error = 'mosaedPointsLoadFailed'.tr();
       });
     }
   }
 
+  String _formatPoints(num value) {
+    return NumberFormat('#,###').format(value.round());
+  }
+
   @override
   Widget build(BuildContext context) {
+    final balance = _wallet?.pointsBalance ?? 0;
+
     return Scaffold(
-      backgroundColor: MosaedColors.background,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: Text(
-          'mosaedLoyaltyPoints'.tr(),
-          style: getBoldStyle(fontSize: 18.sp, color: MosaedColors.textPrimary),
-        ),
-      ),
+      backgroundColor: MosaedColors.surfaceWhite,
+      appBar: AddressAppBar(title: LocaleKeys.mosaedLoyaltyPoints.tr()),
       body: RefreshIndicator(
+        color: MosaedColors.brand,
         onRefresh: _load,
-        color: MosaedColors.primary,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: EdgeInsets.all(20.w),
+          padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 24.h),
           children: [
             if (_loading)
               Padding(
                 padding: EdgeInsets.only(top: 80.h),
                 child: const Center(
-                  child: CircularProgressIndicator(
-                    color: MosaedColors.primaryContainer,
-                  ),
+                  child: CircularProgressIndicator(color: MosaedColors.brand),
                 ),
               )
-            else if (_error != null)
-              Padding(
-                padding: EdgeInsets.only(top: 60.h),
-                child: Column(
-                  children: [
-                    Icon(
-                      Icons.stars_rounded,
-                      size: 48.sp,
-                      color: MosaedColors.textHint,
-                    ),
-                    SizedBox(height: 12.h),
-                    Text(
-                      _error!,
-                      textAlign: TextAlign.center,
-                      style: getMediumStyle(
-                        fontSize: 14.sp,
-                        color: MosaedColors.textSecondary,
-                      ),
-                    ),
-                    SizedBox(height: 16.h),
-                    TextButton(
-                      onPressed: _load,
-                      child: Text('retry'.tr()),
-                    ),
-                  ],
-                ),
-              )
-            else if (_wallet != null) ...[
+            else ...[
               Container(
                 width: double.infinity,
-                padding: EdgeInsets.all(24.w),
+                padding: EdgeInsets.fromLTRB(20.w, 22.h, 16.w, 22.h),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      MosaedColors.primary.withValues(alpha: 0.14),
-                      MosaedColors.surface,
-                    ],
-                    begin: Alignment.topRight,
-                    end: Alignment.bottomLeft,
-                  ),
                   borderRadius: BorderRadius.circular(20.r),
-                  border: Border.all(color: MosaedColors.border),
+                  gradient: const LinearGradient(
+                    begin: Alignment.centerRight,
+                    end: Alignment.centerLeft,
+                    colors: [
+                      Color(0xFFF7842C),
+                      Color(0xFFF9B05A),
+                      Color(0xFFFFD7A3),
+                    ],
+                    stops: [0.0, 0.42, 1.0],
+                  ),
                 ),
-                child: Column(
+                child: Row(
                   children: [
-                    Icon(
-                      Icons.stars_rounded,
-                      color: MosaedColors.primary,
-                      size: 40.sp,
-                    ),
-                    SizedBox(height: 12.h),
-                    Text(
-                      _wallet!.pointsBalance.toStringAsFixed(0),
-                      style: getBoldStyle(
-                        fontSize: 40.sp,
-                        color: MosaedColors.primary,
-                      ),
-                    ),
-                    Text(
-                      'mosaedPointsBalance'.tr(),
-                      style: getMediumStyle(
-                        fontSize: 14.sp,
-                        color: MosaedColors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(height: 16.h),
-              Row(
-                children: [
-                  Expanded(
-                    child: _StatCard(
-                      label: 'mosaedPointsEarned'.tr(),
-                      value: _wallet!.totalEarnedPoints.toStringAsFixed(0),
-                      icon: Icons.trending_up_rounded,
-                    ),
-                  ),
-                  SizedBox(width: 12.w),
-                  Expanded(
-                    child: _StatCard(
-                      label: 'mosaedPointsRedeemed'.tr(),
-                      value: _wallet!.totalRedeemedPoints.toStringAsFixed(0),
-                      icon: Icons.trending_down_rounded,
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 20.h),
-              Text(
-                'mosaedPointsWalletHint'.tr(),
-                textAlign: TextAlign.center,
-                style: getRegularStyle(
-                  fontSize: 13.sp,
-                  color: MosaedColors.textSecondary,
-                ),
-              ),
-              SizedBox(height: 24.h),
-              Align(
-                alignment: AlignmentDirectional.centerStart,
-                child: Text(
-                  'mosaedRecentTransactions'.tr(),
-                  style: getBoldStyle(
-                    fontSize: 15.sp,
-                    color: MosaedColors.textPrimary,
-                  ),
-                ),
-              ),
-              SizedBox(height: 10.h),
-              if (_wallet!.recentTransactions.isEmpty)
-                Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.all(16.w),
-                  decoration: BoxDecoration(
-                    color: MosaedColors.surface,
-                    borderRadius: BorderRadius.circular(14.r),
-                    border: Border.all(color: MosaedColors.border),
-                  ),
-                  child: Text(
-                    'mosaedNoTransactionsYet'.tr(),
-                    textAlign: TextAlign.center,
-                    style: getMediumStyle(
-                      fontSize: 13.sp,
-                      color: MosaedColors.textSecondary,
-                    ),
-                  ),
-                )
-              else
-                ..._wallet!.recentTransactions.map(
-                  (tx) => Padding(
-                    padding: EdgeInsets.only(bottom: 8.h),
-                    child: Container(
-                      width: double.infinity,
-                      padding: EdgeInsets.all(14.w),
-                      decoration: BoxDecoration(
-                        color: MosaedColors.surface,
-                        borderRadius: BorderRadius.circular(14.r),
-                        border: Border.all(color: MosaedColors.border),
-                      ),
-                      child: Row(
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(
-                            (tx.points >= 0)
-                                ? Icons.add_circle_outline_rounded
-                                : Icons.remove_circle_outline_rounded,
-                            color: tx.points >= 0
-                                ? MosaedColors.success
-                                : MosaedColors.danger,
-                            size: 22.sp,
-                          ),
-                          SizedBox(width: 10.w),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  tx.description?.trim().isNotEmpty == true
-                                      ? tx.description!
-                                      : (tx.type ?? 'mosaedLoyaltyPoints'.tr()),
-                                  style: getMediumStyle(
-                                    fontSize: 13.sp,
-                                    color: MosaedColors.textPrimary,
-                                  ),
-                                ),
-                                if (tx.createdAt != null) ...[
-                                  SizedBox(height: 2.h),
-                                  Text(
-                                    tx.createdAt!,
-                                    style: getRegularStyle(
-                                      fontSize: 11.sp,
-                                      color: MosaedColors.textSecondary,
-                                    ),
-                                  ),
-                                ],
-                              ],
+                          Text(
+                            LocaleKeys.mosaedYourPointsBalance.tr(),
+                            style: getMediumStyle(
+                              fontSize: 13.sp,
+                              color: Colors.white.withValues(alpha: 0.9),
                             ),
                           ),
+                          SizedBox(height: 6.h),
                           Text(
-                            '${tx.points >= 0 ? '+' : ''}${tx.points.toStringAsFixed(0)}',
+                            '${_formatPoints(balance)} ${'mosaedPointsUnit'.tr()}',
                             style: getBoldStyle(
-                              fontSize: 14.sp,
-                              color: tx.points >= 0
-                                  ? MosaedColors.success
-                                  : MosaedColors.danger,
+                              fontSize: 26.sp,
+                              color: Colors.white,
                             ),
                           ),
                         ],
                       ),
                     ),
-                  ),
+                    SizedBox(width: 8.w),
+                    Image.asset(
+                      ImageAssets.pointsCoin,
+                      width: 84.w,
+                      height: 84.w,
+                      fit: BoxFit.contain,
+                    ),
+                  ],
                 ),
+              ),
+              SizedBox(height: 16.h),
+              Container(
+                decoration: BoxDecoration(
+                  color: MosaedColors.surfaceWhite,
+                  borderRadius: BorderRadius.circular(14.r),
+                  border: Border.all(color: MosaedColors.fieldBorder),
+                ),
+                child: Column(
+                  children: [
+                    MoreCardTile(
+                      title: LocaleKeys.mosaedPointsHistory.tr(),
+                      leadingAsset: ImageAssets.timeQuarterPass,
+                      circleIcon: true,
+                      showBorder: false,
+                      trailing: Icon(
+                        Icons.chevron_left_rounded,
+                        size: 20.sp,
+                        color: MosaedColors.textHint,
+                      ),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => PointsHistoryScreen(
+                              transactions:
+                                  _wallet?.recentTransactions ?? const [],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 14.w),
+                      child: Divider(
+                        height: 1,
+                        color: MosaedColors.fieldBorder,
+                      ),
+                    ),
+                    MoreCardTile(
+                      title: LocaleKeys.mosaedProgramRules.tr(),
+                      leadingAsset: ImageAssets.gift,
+                      circleIcon: true,
+                      showBorder: false,
+                      trailing: Icon(
+                        Icons.chevron_left_rounded,
+                        size: 20.sp,
+                        color: MosaedColors.textHint,
+                      ),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const PointsRulesScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
             ],
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _StatCard extends StatelessWidget {
-  const _StatCard({
-    required this.label,
-    required this.value,
-    required this.icon,
-  });
-
-  final String label;
-  final String value;
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.all(16.w),
-      decoration: BoxDecoration(
-        color: MosaedColors.surface,
-        borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: MosaedColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: MosaedColors.primary, size: 22.sp),
-          SizedBox(height: 10.h),
-          Text(
-            value,
-            style: getBoldStyle(
-              fontSize: 20.sp,
-              color: MosaedColors.textPrimary,
-            ),
-          ),
-          SizedBox(height: 4.h),
-          Text(
-            label,
-            style: getRegularStyle(
-              fontSize: 12.sp,
-              color: MosaedColors.textSecondary,
-            ),
-          ),
-        ],
       ),
     );
   }

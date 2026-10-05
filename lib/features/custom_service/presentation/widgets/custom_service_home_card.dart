@@ -15,12 +15,16 @@ class CustomServiceHomeCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 20.w),
+      padding: EdgeInsets.symmetric(horizontal: 16.w),
       child: Container(
-        padding: EdgeInsets.all(16.w),
+        padding: EdgeInsets.all(14.w),
         decoration: BoxDecoration(
           color: MosaedColors.surfaceWhite,
-          borderRadius: BorderRadius.circular(12.r),
+          borderRadius: BorderRadius.circular(16.r),
+          border: Border.all(
+            color: MosaedColors.primaryContainer,
+            width: 1.4,
+          ),
           boxShadow: [
             BoxShadow(
               color: _brandShadow,
@@ -53,7 +57,7 @@ class CustomServiceHomeCard extends StatelessWidget {
                   child: Text(
                     'mosaedCustomServiceHomeDesc'.tr(),
                     style: getRegularStyle(
-                      fontSize: 13.sp,
+                      fontSize: 12.sp,
                       color: MosaedColors.onSurfaceVariant,
                       height: 1.45,
                     ),
@@ -74,7 +78,7 @@ class CustomServiceHomeCard extends StatelessWidget {
                 child: Text(
                   'mosaedCustomProblemHint'.tr(),
                   style: getRegularStyle(
-                    fontSize: 15.sp,
+                    fontSize: 13.sp,
                     color: MosaedColors.onSurfaceVariant.withValues(alpha: 0.7),
                   ),
                 ),
@@ -85,22 +89,22 @@ class CustomServiceHomeCard extends StatelessWidget {
             SizedBox(height: 12.h),
             Center(
               child: Material(
-                color: MosaedColors.primary,
-                borderRadius: BorderRadius.circular(8.r),
+                color: MosaedColors.primaryContainer,
+                borderRadius: BorderRadius.circular(16.r),
                 elevation: 1,
                 shadowColor: MosaedColors.primary.withValues(alpha: 0.25),
                 child: InkWell(
                   onTap: onTap,
-                  borderRadius: BorderRadius.circular(8.r),
+                  borderRadius: BorderRadius.circular(16.r),
                   child: Padding(
                     padding: EdgeInsets.symmetric(
-                      horizontal: 28.w,
+                      horizontal: 24.w,
                       vertical: 10.h,
                     ),
                     child: Text(
                       'next'.tr(),
                       style: getBoldStyle(
-                        fontSize: 14.sp,
+                        fontSize: 12.sp,
                         color: Colors.white,
                       ),
                     ),

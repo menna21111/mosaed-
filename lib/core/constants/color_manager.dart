@@ -6,8 +6,8 @@ class ColorManager {
   static const Color secondaryLightColor = Color(0xFFF59E0B);
   static const Color backgroundLightColor = Color(0xFFF5F7FA);
   static const Color surfaceLightColor = Color(0xFFFFFFFF); // surface
-  static const Color textHeadingLightColor = Color(0xFF212121); // textHeading
-  static const Color textBodyLightColor = Color(0xFF475569); // textBody
+  static const Color textHeadingLightColor = Color(0xFF1C1B22); // textHeading
+  static const Color textBodyLightColor = Color(0xFF6B6875); // textBody
   static const Color successLightColor = Color(0xFF4CAF50); // success
 
   // ─── Keep old light constants so that old UI files don't break until refactored
