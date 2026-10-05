@@ -73,11 +73,14 @@ class NotificationsRepository {
     }
   }
 
-  Future<void> registerDeviceToken(String token) async {
+  Future<void> registerDeviceToken(String deviceToken) async {
     try {
       final response = await DioHelper.postData(
         url: AppConstants.deviceTokens,
-        data: {'token': token},
+        data: {
+          'device_token': deviceToken,
+          'token': deviceToken,
+        },
       );
       if (response.statusCode != 200 && response.statusCode != 201) {
         throw ServerFailure(_extractError(response.data));
@@ -87,11 +90,14 @@ class NotificationsRepository {
     }
   }
 
-  Future<void> deleteDeviceToken(String token) async {
+  Future<void> deleteDeviceToken(String deviceToken) async {
     try {
       await DioHelper.deleteData(
         url: AppConstants.deviceTokens,
-        data: {'token': token},
+        data: {
+          'device_token': deviceToken,
+          'token': deviceToken,
+        },
       );
     } on DioException catch (e) {
       throw ServerFailure.fromDioError(e);

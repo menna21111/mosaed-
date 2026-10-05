@@ -7,6 +7,8 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:page_transition/page_transition.dart';
 import '../../../app/app.dart';
 import '../../../app/functions.dart';
+import '../../../core/caching/cach_helper.dart';
+import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/mosaed_colors.dart';
 import '../../../core/realtime/chat_session_registry.dart';
 import '../../../features/notifications/data/notifications_repository.dart';
@@ -226,21 +228,35 @@ class PushNotificationService {
     _handleRemoteMessageNavigation(message);
   }
 
+  /// Registers the FCM device token on `/api/custom_services/device-tokens/`.
+  /// Sends the login access token in `Authorization`. Skips when nobody is logged in.
   static Future<void> syncTokenWithBackend() async {
     if (_notificationsRepository == null) return;
     if (!await NotificationManager.isNotificationsEnabled()) return;
 
-    final token = await getToken();
-    if (token == null || token.isEmpty) {
-      debugPrint('FCM token empty — skip backend register');
+    final accessToken = CacheHelper().getDataString(
+      key: AppConstants.accessTokenKey,
+    );
+    if (accessToken == null || accessToken.isEmpty) {
+      debugPrint('Skip device-token register — no access token yet');
+      return;
+    }
+
+    var deviceToken = await getToken();
+    if (deviceToken == null || deviceToken.isEmpty) {
+      await Future<void>.delayed(const Duration(milliseconds: 800));
+      deviceToken = await getToken();
+    }
+    if (deviceToken == null || deviceToken.isEmpty) {
+      debugPrint('FCM device token empty — skip backend register');
       return;
     }
 
     try {
-      await _notificationsRepository!.registerDeviceToken(token);
-      debugPrint('FCM token registered with backend');
+      await _notificationsRepository!.registerDeviceToken(deviceToken);
+      debugPrint('Device token registered with backend');
     } catch (e) {
-      debugPrint('Failed to register FCM token: $e');
+      debugPrint('Failed to register device token: $e');
     }
   }
 

@@ -1,10 +1,12 @@
 import 'dart:developer';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../app/auth_navigation.dart';
+import '../../../core/constants/assets_manager.dart';
 import '../../../core/constants/mosaed_colors.dart';
-import '../../auth/presentation/widgets/mosaed_logo.dart';
+import '../../../core/services/notification/push_notification_service.dart';
 
 /// App entry splash. Onboarding is temporarily disabled.
 class SplashScrean extends StatefulWidget {
@@ -44,7 +46,6 @@ class _SplashScreanState extends State<SplashScrean> {
             Image.asset(ImageAssets.logo, width: 260.w, fit: BoxFit.contain),
           ],
         ),
-        child: const MosaedLogo(width: 200),
       ),
     );
   }

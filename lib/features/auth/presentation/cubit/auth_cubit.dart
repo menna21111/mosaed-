@@ -40,9 +40,8 @@ class AuthCubit extends Cubit<AuthState> {
         phoneNumber: phoneNumber,
         otpCode: otpCode,
       );
+      await PushNotificationService.syncTokenWithBackend();
       emit(AuthVerified(session: session));
-      // ignore: unawaited_futures
-      PushNotificationService.syncTokenWithBackend();
     } on ServerFailure catch (e) {
       emit(AuthFailure(e.errMessage));
     } catch (_) {
@@ -75,9 +74,8 @@ class AuthCubit extends Cubit<AuthState> {
     emit(const AuthLoading());
     try {
       final session = await _repository.loginWithBiometric();
+      await PushNotificationService.syncTokenWithBackend();
       emit(AuthVerified(session: session));
-      // ignore: unawaited_futures
-      PushNotificationService.syncTokenWithBackend();
     } on BiometricCancelledException {
       emit(const AuthInitial());
     } on ServerFailure catch (e) {

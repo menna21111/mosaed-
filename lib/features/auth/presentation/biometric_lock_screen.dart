@@ -145,6 +145,7 @@ class _BiometricLockScreenState extends State<BiometricLockScreen> {
               padding: const EdgeInsets.all(8.0),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   if (showStatusPanel) ...[
                     SizedBox(height: 60.h),
@@ -201,6 +202,7 @@ class _BiometricLockScreenState extends State<BiometricLockScreen> {
                     SizedBox(height: 32.h),
                     FadeIn(
                       child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           Container(
                             width: 120.w,
@@ -226,20 +228,27 @@ class _BiometricLockScreenState extends State<BiometricLockScreen> {
                             ),
                           ],
                           SizedBox(height: 24.h),
-                          Text(
-                            LocaleKeys.mosaedWelcomeBack.tr(),
-                            style: getBoldStyle(
-                              fontSize: 16.sp,
-                              color: MosaedColors.textPrimary,
+                          SizedBox(
+                            width: double.infinity,
+                            child: Text(
+                              LocaleKeys.mosaedWelcomeBack.tr(),
+                              textAlign: TextAlign.center,
+                              style: getBoldStyle(
+                                fontSize: 16.sp,
+                                color: MosaedColors.textPrimary,
+                              ),
                             ),
                           ),
                           SizedBox(height: 8.h),
-                          Text(
-                            LocaleKeys.mosaedBiometricInstruction.tr(),
-                            textAlign: TextAlign.center,
-                            style: getRegularStyle(
-                              fontSize: 12.sp,
-                              color: MosaedColors.textSecondary,
+                          SizedBox(
+                            width: double.infinity,
+                            child: Text(
+                              LocaleKeys.mosaedBiometricInstruction.tr(),
+                              textAlign: TextAlign.center,
+                              style: getRegularStyle(
+                                fontSize: 12.sp,
+                                color: MosaedColors.textSecondary,
+                              ),
                             ),
                           ),
                           if (!_isLoading) ...[
@@ -263,12 +272,15 @@ class _BiometricLockScreenState extends State<BiometricLockScreen> {
                         const LoginScrean(),
                       );
                     },
-                    child: Text(
-                      'mosaedUsePasswordInstead'.tr(),
-                      textAlign: TextAlign.center,
-                      style: getBoldStyle(
-                        fontSize: 13.sp,
-                        color: MosaedColors.brand,
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: Text(
+                        'mosaedUsePasswordInstead'.tr(),
+                        textAlign: TextAlign.center,
+                        style: getBoldStyle(
+                          fontSize: 13.sp,
+                          color: MosaedColors.brand,
+                        ),
                       ),
                     ),
                   ),
@@ -315,6 +327,7 @@ class _StatusCard extends StatelessWidget {
         ),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Icon(
             isSetup ? Icons.fingerprint_rounded : Icons.warning_rounded,
@@ -322,12 +335,15 @@ class _StatusCard extends StatelessWidget {
             color: isSetup ? MosaedColors.primary : MosaedColors.danger,
           ),
           SizedBox(height: 16.h),
-          Text(
-            message,
-            textAlign: TextAlign.center,
-            style: getMediumStyle(
-              fontSize: 14.sp,
-              color: isSetup ? MosaedColors.textPrimary : MosaedColors.danger,
+          SizedBox(
+            width: double.infinity,
+            child: Text(
+              message,
+              textAlign: TextAlign.center,
+              style: getMediumStyle(
+                fontSize: 14.sp,
+                color: isSetup ? MosaedColors.textPrimary : MosaedColors.danger,
+              ),
             ),
           ),
         ],
