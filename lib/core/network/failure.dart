@@ -24,6 +24,9 @@ class ServerFailure extends Failure {
       }
 
       final message = data['message'];
+      if (message is List && message.isNotEmpty) {
+        return message.first.toString();
+      }
       if (message != null && message.toString().trim().isNotEmpty) {
         return message.toString();
       }

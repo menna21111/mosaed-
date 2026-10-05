@@ -81,6 +81,17 @@ class ServicesRepository {
     }
   }
 
+  Future<ServiceDetailBundle> loadServiceDetail(String serviceId) async {
+    final results = await Future.wait([
+      getServiceDetail(serviceId),
+      getServicePreviousWorks(serviceId),
+    ]);
+    return ServiceDetailBundle(
+      detail: results[0] as ExistedServiceDetail,
+      previousWorks: results[1] as List<ServicePreviousWork>,
+    );
+  }
+
   Future<CouponValidationResult> validateCoupon({
     required String code,
     required String serviceId,
@@ -241,6 +252,50 @@ class ServicesRepository {
         await CacheHelper().saveData(
           key: AppConstants.locationSetupDoneKey,
           value: true,
+        );
+      }
+      return address;
+    } on DioException catch (e) {
+      throw ServerFailure.fromDioError(e);
+    }
+  }
+
+  Future<CustomerAddress> updateAddress(
+    String addressId,
+    CreateAddressPayload payload,
+  ) async {
+    try {
+      final response = await DioHelper.patchData(
+        url: AppConstants.customerAddress(addressId),
+        data: payload.toJson(),
+      );
+      if (response.statusCode != 200 && response.statusCode != 201) {
+        throw ServerFailure(_extractError(response.data));
+      }
+      final map = response.data is Map<String, dynamic>
+          ? response.data as Map<String, dynamic>
+          : <String, dynamic>{};
+      final address = map.isEmpty
+          ? CustomerAddress(
+              id: addressId,
+              city: payload.city,
+              cityName: '',
+              region: payload.region,
+              regionName: '',
+              district: payload.district,
+              street: payload.street,
+              buildingNo: payload.buildingNo,
+              lat: payload.lat.toString(),
+              lng: payload.lng.toString(),
+              apartmentNo: payload.apartmentNo,
+              label: payload.label,
+              isDefault: payload.isDefault,
+            )
+          : CustomerAddress.fromJson(map);
+      if (payload.isDefault) {
+        await CacheHelper().saveData(
+          key: AppConstants.defaultAddressIdKey,
+          value: address.id,
         );
       }
       return address;

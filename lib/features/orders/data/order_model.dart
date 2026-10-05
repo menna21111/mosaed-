@@ -58,6 +58,7 @@ class ServiceOrder {
     this.type = OrderType.booking,
     required this.workerName,
     this.workerPhone,
+    this.workerImage,
     required this.workerRating,
     required this.workerJobsCount,
     required this.agreedAmount,
@@ -90,6 +91,7 @@ class ServiceOrder {
   final OrderType type;
   final String workerName;
   final String? workerPhone;
+  final String? workerImage;
   final double workerRating;
   final int workerJobsCount;
   final double agreedAmount;
@@ -179,6 +181,7 @@ class ServiceOrder {
       type: type,
       workerName: workerName,
       workerPhone: workerPhone,
+      workerImage: workerImage,
       workerRating: workerRating,
       workerJobsCount: workerJobsCount,
       agreedAmount: agreedAmount,

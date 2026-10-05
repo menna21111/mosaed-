@@ -7,6 +7,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../../app/functions.dart';
 import '../../../../core/constants/mosaed_colors.dart';
 import '../../../../core/constants/styles_manager.dart';
+import '../../../../core/widgets/mosaed_price_text.dart';
 import '../../../auth/presentation/widgets/mosaed_buttons.dart';
 import '../../data/models/customer_points_wallet.dart';
 import '../../data/models/payment_request.dart';
@@ -112,7 +113,6 @@ class _PaymentPointsSectionState extends State<PaymentPointsSection> {
 
   @override
   Widget build(BuildContext context) {
-    final currency = 'mosaedCurrency'.tr();
     final payable = _payment?.payableAmount ?? widget.baseAmount;
     final pointsApplied = _payment?.hasPointsApplied == true;
 
@@ -174,17 +174,20 @@ class _PaymentPointsSectionState extends State<PaymentPointsSection> {
               ),
               if (pointsApplied) ...[
                 SizedBox(height: 10.h),
-                Text(
-                  '${'mosaedPointsUsed'.tr()}: ${(_payment?.pointsUsed ?? 0).toStringAsFixed(0)}'
-                  '  •  ${'mosaedPointsDiscount'.tr()}: ${(_payment?.pointsDiscountAmount ?? 0).toStringAsFixed(0)} $currency',
+                MosaedPriceText(
+                  amount: _payment?.pointsDiscountAmount ?? 0,
+                  prefix:
+                      '${'mosaedPointsUsed'.tr()}: ${(_payment?.pointsUsed ?? 0).toStringAsFixed(0)}'
+                      '  •  ${'mosaedPointsDiscount'.tr()}: ',
                   style: getMediumStyle(
                     fontSize: 12.sp,
                     color: MosaedColors.success,
                   ),
                 ),
                 SizedBox(height: 4.h),
-                Text(
-                  '${'mosaedFinalAmount'.tr()}: ${payable.toStringAsFixed(0)} $currency',
+                MosaedPriceText(
+                  amount: payable,
+                  prefix: '${'mosaedFinalAmount'.tr()}: ',
                   style: getBoldStyle(
                     fontSize: 14.sp,
                     color: MosaedColors.primary,

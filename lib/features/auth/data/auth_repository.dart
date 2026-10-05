@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:easy_localization/easy_localization.dart';
 
@@ -108,6 +110,69 @@ class AuthRepository {
     }
   }
 
+  Future<CustomerProfile> updateProfile({
+    required String name,
+    required String phoneNumber,
+    String? email,
+    File? photo,
+  }) async {
+    try {
+      Response response;
+      if (photo != null) {
+        response = await DioHelper.patchMultipart(
+          url: AppConstants.customerProfile,
+          data: FormData.fromMap({
+            'name': name,
+            'phone_number': phoneNumber,
+            'email': ?email,
+            'photo': await MultipartFile.fromFile(
+              photo.path,
+              filename: photo.path.split('/').last,
+            ),
+          }),
+        );
+      } else {
+        response = await DioHelper.patchData(
+          url: AppConstants.customerProfile,
+          data: {
+            'name': name,
+            'phone_number': phoneNumber,
+            'email': ?email,
+          },
+        );
+      }
+      if (response.statusCode != 200 && response.statusCode != 201) {
+        throw ServerFailure(_extractError(response.data));
+      }
+      final map = response.data is Map<String, dynamic>
+          ? response.data as Map<String, dynamic>
+          : <String, dynamic>{};
+      final profile = (map.containsKey('id') || map.containsKey('name'))
+          ? CustomerProfile.fromJson(map)
+          : await getCustomerProfile();
+      await CacheHelper().saveData(
+        key: AppConstants.userNameKey,
+        value: profile.name,
+      );
+      await CacheHelper().saveData(
+        key: AppConstants.phoneNumberKey,
+        value: profile.phoneNumber,
+      );
+      return profile;
+    } on DioException catch (e) {
+      throw ServerFailure.fromDioError(e);
+    }
+  }
+
+  Future<void> deleteAccount() async {
+    try {
+      await DioHelper.deleteData(url: AppConstants.customerProfile);
+    } on DioException catch (e) {
+      throw ServerFailure.fromDioError(e);
+    }
+    await clearSession();
+  }
+
   Future<void> registerCustomer({
     required String name,
     required String phoneNumber,
@@ -190,8 +255,15 @@ class AuthRepository {
       reason: 'mosaedBiometricPromptReason'.tr(),
     );
 
-    if (!authenticated) {
-      throw ServerFailure('mosaedBiometricAuthFailed'.tr());
+    switch (authenticated) {
+      case BiometricAuthStatus.success:
+        break;
+      case BiometricAuthStatus.cancelled:
+        throw const BiometricCancelledException();
+      case BiometricAuthStatus.unavailable:
+        throw ServerFailure('mosaedBiometricDeviceUnavailable'.tr());
+      case BiometricAuthStatus.failed:
+        throw ServerFailure('mosaedBiometricAuthFailed'.tr());
     }
 
     try {
@@ -284,7 +356,7 @@ class AuthRepository {
     final authenticated = await BiometricService.authenticate(
       reason: promptMessage,
     );
-    if (!authenticated) {
+    if (authenticated != BiometricAuthStatus.success) {
       return (success: false, error: 'mosaedBiometricAuthCancelled'.tr());
     }
 

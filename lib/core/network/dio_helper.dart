@@ -137,8 +137,11 @@ class DioHelper {
     required FormData data,
     Map<String, dynamic>? query,
     bool isWithoutToken = false,
+    Duration? sendTimeout,
+    Duration? receiveTimeout,
   }) async {
     final accessToken = await getAccessToken();
+    // Don't call headers() — it forces application/json and breaks FormData.
     return dio!.post(
       url,
       data: data,
@@ -149,6 +152,8 @@ class DioHelper {
           if (!isWithoutToken && accessToken != null)
             'Authorization': 'Bearer $accessToken',
         },
+        sendTimeout: sendTimeout,
+        receiveTimeout: receiveTimeout,
       ),
     );
   }
@@ -182,6 +187,27 @@ class DioHelper {
   }) async {
     await headers();
     return dio!.patch(url, data: data, queryParameters: query);
+  }
+
+  static Future<Response> patchMultipart({
+    required String url,
+    required FormData data,
+    Map<String, dynamic>? query,
+    bool isWithoutToken = false,
+  }) async {
+    final accessToken = await getAccessToken();
+    return dio!.patch(
+      url,
+      data: data,
+      queryParameters: query,
+      options: Options(
+        headers: {
+          'Accept': 'application/json',
+          if (!isWithoutToken && accessToken != null)
+            'Authorization': 'Bearer $accessToken',
+        },
+      ),
+    );
   }
 
   static Future<Response> deleteData({

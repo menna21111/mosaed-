@@ -5,69 +5,25 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:page_transition/page_transition.dart';
 
 import '../../../app/functions.dart';
+import '../../../core/constants/locale_keys.dart';
 import '../../../core/constants/mosaed_colors.dart';
-import '../../../core/constants/styles_manager.dart';
 import '../../../core/network/failure.dart';
-import '../../../core/widgets/home_shimmer.dart';
-import '../../../core/widgets/service_thumbnail.dart';
 import '../../auth/data/auth_repository.dart';
+import '../../custom_service/data/custom_service_repository.dart';
+import '../../custom_service/data/models/custom_service_models.dart';
+import '../../custom_service/presentation/custom_request_detail_screen.dart';
 import '../../custom_service/presentation/custom_service_screen.dart';
-import '../../custom_service/presentation/widgets/custom_service_home_card.dart';
-import '../../notifications/presentation/cubit/notification_cubit.dart';
-import '../../notifications/presentation/notifications_screen.dart';
+import '../../payments/data/payments_repository.dart';
+import '../../payments/presentation/points_wallet_screen.dart';
+import '../../services/data/models/address_models.dart';
 import '../../services/data/models/existed_service.dart';
 import '../../services/data/services_repository.dart';
+import '../../services/presentation/addresses_list_screen.dart';
 import '../../services/presentation/service_detail_screen.dart';
-
-class _NotificationsBell extends StatelessWidget {
-  const _NotificationsBell();
-
-  @override
-  Widget build(BuildContext context) {
-    return BlocBuilder<NotificationCubit, NotificationState>(
-      builder: (context, state) {
-        return Stack(
-          clipBehavior: Clip.none,
-          children: [
-            IconButton(
-              onPressed: () => AppFunctions.navigateTo(
-                context,
-                const NotificationsScreen(),
-                PageTransitionType.rightToLeft,
-              ),
-              icon: Icon(
-                Icons.notifications,
-                color: MosaedColors.primary,
-                size: 32.sp,
-              ),
-            ),
-            if (state.unreadCount > 0)
-              Positioned(
-                right: 4.w,
-                top: 4.h,
-                child: Container(
-                  padding: EdgeInsets.all(4.w),
-                  constraints: BoxConstraints(
-                    minWidth: 18.w,
-                    minHeight: 18.w,
-                  ),
-                  decoration: const BoxDecoration(
-                    color: MosaedColors.danger,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Text(
-                    state.unreadCount > 99 ? '99+' : '${state.unreadCount}',
-                    textAlign: TextAlign.center,
-                    style: getBoldStyle(fontSize: 9.sp, color: Colors.white),
-                  ),
-                ),
-              ),
-          ],
-        );
-      },
-    );
-  }
-}
+import '../../services/presentation/widgets/address_place_type.dart';
+import 'widgets/home_header.dart';
+import 'widgets/home_problem_card.dart';
+import 'widgets/home_sections.dart';
 
 class HomeTab extends StatefulWidget {
   const HomeTab({super.key});
@@ -78,29 +34,69 @@ class HomeTab extends StatefulWidget {
 
 class _HomeTabState extends State<HomeTab> {
   List<ExistedService> _services = [];
+  List<CustomRequest> _recentRequests = [];
+  CustomerAddress? _defaultAddress;
+  String _pointsBalance = '0';
+  String? _avatarUrl;
   bool _loading = true;
   String? _error;
 
   @override
   void initState() {
     super.initState();
-    _loadServices();
+    _load();
   }
 
-  Future<void> _loadServices() async {
+  Future<void> _load() async {
     setState(() {
       _loading = true;
       _error = null;
     });
+
     try {
-      final services =
-          await context.read<ServicesRepository>().getExistedServices();
-      if (mounted) {
-        setState(() {
-          _services = services;
-          _loading = false;
-        });
-      }
+      final servicesRepo = context.read<ServicesRepository>();
+      final customRepo = context.read<CustomServiceRepository>();
+
+      final results = await Future.wait([
+        servicesRepo.getExistedServices(),
+        servicesRepo.getAddresses(),
+        customRepo.getCustomRequests(),
+      ]);
+
+      final services = results[0] as List<ExistedService>;
+      final addresses = results[1] as List<CustomerAddress>;
+      final requests = results[2] as List<CustomRequest>;
+
+      String points = '0';
+      String? avatarUrl;
+      try {
+        if (!mounted) return;
+        final wallet =
+            await context.read<PaymentsRepository>().getPointsWallet();
+        points = wallet.pointsBalance.toStringAsFixed(0);
+      } catch (_) {}
+
+      try {
+        if (!mounted) return;
+        final profile =
+            await context.read<AuthRepository>().getCustomerProfile();
+        avatarUrl = profile.avatar;
+      } catch (_) {}
+
+      if (!mounted) return;
+      setState(() {
+        _services = services;
+        _defaultAddress = addresses.isEmpty
+            ? null
+            : addresses.firstWhere(
+                (a) => a.isDefault,
+                orElse: () => addresses.first,
+              );
+        _recentRequests = requests.take(8).toList();
+        _pointsBalance = points;
+        _avatarUrl = avatarUrl;
+        _loading = false;
+      });
     } on ServerFailure catch (e) {
       if (mounted) {
         setState(() {
@@ -113,18 +109,65 @@ class _HomeTabState extends State<HomeTab> {
     }
   }
 
-  void _openServiceDetail(BuildContext context, String serviceId) {
+  String get _locationText {
+    final a = _defaultAddress;
+    if (a == null) return LocaleKeys.mosaedSelectLocationShort.tr();
+    final city = a.cityName.trim();
+    final district = a.district.trim();
+    if (city.isNotEmpty && district.isNotEmpty) return '$city، $district';
+    if (city.isNotEmpty) return city;
+    return a.fullAddress;
+  }
+
+  String get _quickAddressLabel {
+    final a = _defaultAddress;
+    if (a == null) return LocaleKeys.mosaedLabelHome.tr();
+    final raw = a.label?.trim() ?? '';
+    if (raw.isEmpty) return LocaleKeys.mosaedLabelHome.tr();
+    final type = addressPlaceTypeFromLabel(raw);
+    if (type == AddressPlaceType.other) {
+      final v = raw.toLowerCase();
+      if (v != 'other' && v != 'أخرى' && v != 'اخرى') return raw;
+    }
+    return type.label;
+  }
+
+  void _openCustomService() {
     AppFunctions.navigateTo(
       context,
-      ServiceDetailScreen(serviceId: serviceId),
+      const CustomServiceScreen(),
       PageTransitionType.rightToLeft,
     );
   }
 
-  void _openCustomService(BuildContext context) {
+  void _openService(ExistedService service) {
     AppFunctions.navigateTo(
       context,
-      const CustomServiceScreen(),
+      ServiceDetailScreen(serviceId: service.id),
+      PageTransitionType.rightToLeft,
+    );
+  }
+
+  void _openRequest(CustomRequest request) {
+    AppFunctions.navigateTo(
+      context,
+      CustomRequestDetailScreen(requestId: request.id),
+      PageTransitionType.rightToLeft,
+    );
+  }
+
+  void _openAddresses() {
+    AppFunctions.navigateTo(
+      context,
+      const AddressesListScreen(),
+      PageTransitionType.rightToLeft,
+    );
+  }
+
+  void _openPoints() {
+    AppFunctions.navigateTo(
+      context,
+      const PointsWalletScreen(),
       PageTransitionType.rightToLeft,
     );
   }
@@ -137,234 +180,52 @@ class _HomeTabState extends State<HomeTab> {
       color: MosaedColors.background,
       child: SafeArea(
         child: RefreshIndicator(
-          color: MosaedColors.primaryContainer,
-          onRefresh: _loadServices,
+          color: MosaedColors.brand,
+          onRefresh: _load,
           child: CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
             slivers: [
               SliverToBoxAdapter(
-                child: Container(
-                  padding: EdgeInsets.fromLTRB(20.w, 12.h, 20.w, 16.h),
-                  decoration: BoxDecoration(
-                    color: MosaedColors.surface.withValues(alpha: 0.92),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.04),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 22.r,
-                        backgroundColor: MosaedColors.surfaceContainerLow,
-                        child: Icon(
-                          Icons.person_rounded,
-                          color: MosaedColors.primary,
-                          size: 26.sp,
-                        ),
-                      ),
-                      SizedBox(width: 10.w),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'mosaedWelcomeUser'.tr(),
-                              style: getRegularStyle(
-                                fontSize: 11.sp,
-                                color: MosaedColors.onSurfaceVariant,
-                              ),
-                            ),
-                            Text(
-                              userName.isNotEmpty ? userName : 'mosaedGuest'.tr(),
-                              style: getBoldStyle(
-                                fontSize: 14.sp,
-                                color: MosaedColors.textPrimary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const _NotificationsBell(),
-                    ],
-                  ),
+                child: HomeHeader(
+                  userName: userName,
+                  avatarUrl: _avatarUrl,
+                  locationText: _locationText,
+                  onLocationTap: _openAddresses,
                 ),
               ),
-              SliverToBoxAdapter(child: SizedBox(height: 20.h)),
+              SliverToBoxAdapter(child: SizedBox(height: 16.h)),
               SliverToBoxAdapter(
-                child: CustomServiceHomeCard(
-                  onTap: () => _openCustomService(context),
-                ),
+                child: HomeProblemCard(onStart: _openCustomService),
               ),
-              SliverToBoxAdapter(child: SizedBox(height: 24.h)),
+              SliverToBoxAdapter(child: SizedBox(height: 22.h)),
               SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 20.w),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'mosaedFeaturedServices'.tr(),
-                        style: getBoldStyle(
-                          fontSize: 20.sp,
-                          color: MosaedColors.textPrimary,
-                        ),
-                      ),
-                      if (_error != null)
-                        TextButton(
-                          onPressed: _loadServices,
-                          child: Text(
-                            'mosaedRetry'.tr(),
-                            style: getBoldStyle(
-                              fontSize: 12.sp,
-                              color: MosaedColors.primary,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
+                child: HomeServicesSection(
+                  loading: _loading,
+                  services: _services,
+                  error: _error,
+                  onTap: _openService,
                 ),
               ),
-              if (_loading)
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
-                    child: const HomeShimmer(),
-                  ),
-                )
-              else if (_services.isEmpty)
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: EdgeInsets.all(20.w),
-                    child: Text(
-                      _error ?? 'noCategories'.tr(),
-                      textAlign: TextAlign.center,
-                      style: getRegularStyle(
-                        fontSize: 14.sp,
-                        color: MosaedColors.textSecondary,
-                      ),
-                    ),
-                  ),
-                )
-              else
-                SliverPadding(
-                  padding: EdgeInsets.fromLTRB(20.w, 12.h, 20.w, 24.h),
-                  sliver: SliverGrid(
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      mainAxisSpacing: 16.h,
-                      crossAxisSpacing: 16.w,
-                      childAspectRatio: 0.82,
-                    ),
-                    delegate: SliverChildBuilderDelegate((context, index) {
-                      final service = _services[index];
-                      return _ServiceGridCard(
-                        service: service,
-                        onTap: () => _openServiceDetail(context, service.id),
-                      );
-                    }, childCount: _services.length),
-                  ),
+              SliverToBoxAdapter(child: SizedBox(height: 22.h)),
+              SliverToBoxAdapter(
+                child: HomeRecentRequestsStrip(
+                  loading: _loading,
+                  requests: _recentRequests,
+                  onTap: _openRequest,
                 ),
+              ),
+              SliverToBoxAdapter(child: SizedBox(height: 22.h)),
+              SliverToBoxAdapter(
+                child: HomeQuickAccessSection(
+                  pointsBalance: _pointsBalance,
+                  addressLabel: _quickAddressLabel,
+                  onAddressesTap: _openAddresses,
+                  onPointsTap: _openPoints,
+                ),
+              ),
+              SliverToBoxAdapter(child: SizedBox(height: 28.h)),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ServiceGridCard extends StatelessWidget {
-  const _ServiceGridCard({required this.service, required this.onTap});
-
-  final ExistedService service;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: MosaedColors.surfaceWhite,
-      borderRadius: BorderRadius.circular(24.r),
-      elevation: 0,
-      shadowColor: Colors.black.withValues(alpha: 0.05),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(24.r),
-        child: Ink(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(24.r),
-            border: Border.all(
-              color: MosaedColors.outlineVariant.withValues(alpha: 0.25),
-            ),
-            boxShadow: MosaedColors.softShadow,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      if (service.hasImage)
-                        Image.network(
-                          service.image!,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => _imageFallback(),
-                        )
-                      else
-                        _imageFallback(),
-                      Positioned(
-                        top: 8.h,
-                        left: 8.w,
-                        child: Container(
-                          padding: EdgeInsets.all(6.w),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.92),
-                            shape: BoxShape.circle,
-                            boxShadow: MosaedColors.softShadow,
-                          ),
-                          child: ServiceThumbnail(
-                            service: service,
-                            size: 18.w,
-                            borderRadius: BorderRadius.circular(6.r),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              Padding(
-                padding: EdgeInsets.symmetric(vertical: 12.h, horizontal: 8.w),
-                child: Text(
-                  service.title,
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: getMediumStyle(
-                    fontSize: 13.sp,
-                    color: MosaedColors.textPrimary,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _imageFallback() {
-    return Container(
-      color: service.accentColor.withValues(alpha: 0.12),
-      child: Center(
-        child: ServiceThumbnail(
-          service: service,
-          size: 48.w,
-          borderRadius: BorderRadius.circular(14.r),
         ),
       ),
     );

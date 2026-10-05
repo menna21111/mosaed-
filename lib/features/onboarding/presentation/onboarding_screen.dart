@@ -1,6 +1,7 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../../app/auth_navigation.dart';
 import '../../../app/functions.dart';
@@ -283,7 +284,7 @@ class _OnboardPage extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Image.asset(
+          SvgPicture.asset(
             ImageAssets.logo,
             width: 160.w,
             fit: BoxFit.contain,
@@ -301,6 +302,7 @@ class _OnboardPage extends StatelessWidget {
 }
 
 /// Used by splash to decide whether to show onboarding first.
+/// Temporarily unused — splash goes directly to [AuthNavigation.goFromSplash].
 class OnboardingGate {
   OnboardingGate._();
 
@@ -308,11 +310,13 @@ class OnboardingGate {
       CacheHelper().getData(key: AppConstants.onboardingSeenKey) == true;
 
   static Future<void> openIfNeeded(BuildContext context) async {
-    if (hasSeen) {
-      await AuthNavigation.goFromSplash(context);
-      return;
-    }
-    if (!context.mounted) return;
-    AppFunctions.navigateToAndFinish(context, const OnboardingScreen());
+    // Onboarding temporarily disabled.
+    // if (hasSeen) {
+    //   await AuthNavigation.goFromSplash(context);
+    //   return;
+    // }
+    // if (!context.mounted) return;
+    // AppFunctions.navigateToAndFinish(context, const OnboardingScreen());
+    await AuthNavigation.goFromSplash(context);
   }
 }

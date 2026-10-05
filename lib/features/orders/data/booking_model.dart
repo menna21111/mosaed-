@@ -57,6 +57,7 @@ class Booking {
     this.paymentTime,
     this.providerName,
     this.providerPhone,
+    this.providerImage,
     required this.providerRating,
     required this.providerReviews,
     required this.addressText,
@@ -85,6 +86,7 @@ class Booking {
   final String? paymentTime;
   final String? providerName;
   final String? providerPhone;
+  final String? providerImage;
   final double providerRating;
   final int providerReviews;
   final String addressText;
@@ -159,6 +161,10 @@ class Booking {
       providerPhone: json['provider_phone']?.toString() ??
           provider?['phone']?.toString() ??
           provider?['phone_number']?.toString(),
+      providerImage: provider?['image']?.toString() ??
+          provider?['photo']?.toString() ??
+          provider?['profile_image']?.toString() ??
+          json['provider_image']?.toString(),
       providerRating: _toDouble(
         provider?['average_rating'] ?? json['provider_rating'],
       ),
@@ -195,6 +201,7 @@ class Booking {
           ? providerName!
           : 'mosaedWorkerPending',
       workerPhone: providerPhone,
+      workerImage: providerImage,
       workerRating: providerRating,
       workerJobsCount: providerReviews,
       agreedAmount: displayAmount,
@@ -202,9 +209,7 @@ class Booking {
       discountAmount: discountAmount,
       paymentReceived: paymentReceived,
       paymentTime: paymentTime != null ? _formatDateTime(paymentTime!) : null,
-      scheduledSlot: scheduledDate != null
-          ? _formatDate(scheduledDate!)
-          : 'mosaedNotAvailableYet',
+      scheduledSlot: scheduledDate ?? 'mosaedNotAvailableYet',
       locationText: addressText.isNotEmpty
           ? addressText
           : 'mosaedNotAvailableYet'.tr(),
@@ -220,7 +225,7 @@ class Booking {
       customerRating: customerRating,
       notes: notes?.trim().isNotEmpty == true ? notes! : 'mosaedNoNotes'.tr(),
       couponCode: couponCode,
-      createdAt: createdAt != null ? _formatDateTime(createdAt!) : null,
+      createdAt: createdAt,
     );
   }
 
@@ -314,15 +319,6 @@ class Booking {
   static List<String> _stringList(dynamic value) {
     if (value is! List) return [];
     return value.map((e) => e.toString()).where((e) => e.isNotEmpty).toList();
-  }
-
-  static String _formatDate(String raw) {
-    try {
-      final dt = DateTime.parse(raw);
-      return DateFormat('yyyy-MM-dd').format(dt.toLocal());
-    } catch (_) {
-      return raw;
-    }
   }
 
   static String _formatDateTime(String raw) {

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-import '../../../core/constants/assets_manager.dart';
+import '../../../app/auth_navigation.dart';
 import '../../../core/constants/mosaed_colors.dart';
-import '../../onboarding/presentation/onboarding_screen.dart';
+import '../../auth/presentation/widgets/mosaed_logo.dart';
 
+/// App entry splash. Onboarding is temporarily disabled.
 class SplashScrean extends StatefulWidget {
   const SplashScrean({super.key});
 
@@ -22,7 +22,10 @@ class _SplashScreanState extends State<SplashScrean> {
   Future<void> _boot() async {
     await Future.delayed(const Duration(milliseconds: 1800));
     if (!mounted) return;
-    await OnboardingGate.openIfNeeded(context);
+
+    // Onboarding temporarily commented out — go straight to auth flow.
+    // await OnboardingGate.openIfNeeded(context);
+    await AuthNavigation.goFromSplash(context);
   }
 
   @override
@@ -30,16 +33,7 @@ class _SplashScreanState extends State<SplashScrean> {
     return Scaffold(
       backgroundColor: MosaedColors.background,
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Image.asset(
-              ImageAssets.logo,
-              width: 260.w,
-              fit: BoxFit.contain,
-            ),
-          ],
-        ),
+        child: const MosaedLogo(width: 200),
       ),
     );
   }

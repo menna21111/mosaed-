@@ -7,6 +7,7 @@ import 'package:page_transition/page_transition.dart';
 import '../../../../app/functions.dart';
 import '../../../../core/constants/mosaed_colors.dart';
 import '../../../../core/constants/styles_manager.dart';
+import '../../../../core/widgets/mosaed_price_text.dart';
 import '../../../auth/presentation/widgets/mosaed_buttons.dart';
 import '../../data/models/payment_request.dart';
 import '../cubit/payment_cubit.dart';
@@ -98,7 +99,6 @@ class _PaymentMethodChoicePanelState extends State<PaymentMethodChoicePanel> {
 
   @override
   Widget build(BuildContext context) {
-    final currency = 'mosaedCurrency'.tr();
     final paymentId = widget.paymentRequestId?.trim() ?? '';
     final showPoints =
         widget.enableLoyaltyPoints && paymentId.isNotEmpty;
@@ -135,8 +135,8 @@ class _PaymentMethodChoicePanelState extends State<PaymentMethodChoicePanel> {
                 ),
               ),
               SizedBox(height: 12.h),
-              Text(
-                '${_displayAmount.toStringAsFixed(0)} $currency',
+              MosaedPriceText(
+                amount: _displayAmount,
                 style: getBoldStyle(
                   fontSize: 24.sp,
                   color: MosaedColors.primary,
@@ -144,8 +144,9 @@ class _PaymentMethodChoicePanelState extends State<PaymentMethodChoicePanel> {
               ),
               if (_payment?.hasPointsApplied == true) ...[
                 SizedBox(height: 4.h),
-                Text(
-                  '${'mosaedOriginalAmount'.tr()}: ${widget.amount.toStringAsFixed(0)} $currency',
+                MosaedPriceText(
+                  amount: widget.amount,
+                  prefix: '${'mosaedOriginalAmount'.tr()}: ',
                   style: getRegularStyle(
                     fontSize: 12.sp,
                     color: MosaedColors.textSecondary,

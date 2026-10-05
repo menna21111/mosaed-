@@ -4,11 +4,13 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../app/functions.dart';
+import '../../../core/constants/locale_keys.dart';
 import '../../../core/constants/mosaed_colors.dart';
 import '../../../core/constants/styles_manager.dart';
 import '../../../core/network/failure.dart';
-import '../../../core/widgets/mosaed_dropdown.dart';
-import '../../auth/presentation/widgets/mosaed_buttons.dart';
+import '../../custom_service/presentation/widgets/custom_request_chrome.dart';
+import '../../custom_service/presentation/widgets/step_location.dart';
+import '../../custom_service/presentation/widgets/step_schedule.dart';
 import '../data/models/address_models.dart';
 import '../data/models/existed_service.dart';
 import '../data/services_repository.dart';
@@ -25,17 +27,19 @@ class ServiceBookingScreen extends StatefulWidget {
 }
 
 class _ServiceBookingScreenState extends State<ServiceBookingScreen> {
+  static const _stepCount = 2;
+
+  final _pageController = PageController();
+
   ExistedServiceDetail? _detail;
   List<CustomerAddress> _addresses = [];
   String? _selectedAddressId;
   String? _selectedAttributeId;
   DateTime? _scheduledDate;
-  final _notesController = TextEditingController();
-  final _couponController = TextEditingController();
-  CouponValidationResult? _appliedCoupon;
+  TimeOfDay? _scheduledTime;
+  int _currentStep = 0;
   bool _loading = true;
   bool _submitting = false;
-  bool _validatingCoupon = false;
 
   @override
   void initState() {
@@ -45,8 +49,7 @@ class _ServiceBookingScreenState extends State<ServiceBookingScreen> {
 
   @override
   void dispose() {
-    _notesController.dispose();
-    _couponController.dispose();
+    _pageController.dispose();
     super.dispose();
   }
 
@@ -58,14 +61,10 @@ class _ServiceBookingScreenState extends State<ServiceBookingScreen> {
     return null;
   }
 
-  ServiceAttribute? get _selectedAttribute {
-    final attrs = _detail?.attributes ?? [];
-    if (_selectedAttributeId == null) return null;
-    for (final attr in attrs) {
-      if (attr.id == _selectedAttributeId) return attr;
-    }
-    return null;
-  }
+  bool get _canContinueSchedule =>
+      _scheduledDate != null && _scheduledTime != null;
+
+  bool get _canConfirm => _selectedAddress != null;
 
   Future<void> _load() async {
     setState(() => _loading = true);
@@ -96,7 +95,6 @@ class _ServiceBookingScreenState extends State<ServiceBookingScreen> {
         if (detail.attributes.isNotEmpty) {
           _selectedAttributeId = detail.attributes.first.id;
         }
-        _appliedCoupon = null;
         _loading = false;
       });
     } on ServerFailure catch (e) {
@@ -113,15 +111,20 @@ class _ServiceBookingScreenState extends State<ServiceBookingScreen> {
     }
   }
 
-  Future<void> _pickDate() async {
-    final now = DateTime.now();
-    final picked = await showDatePicker(
+  Future<void> _changeLocation() async {
+    if (_addresses.isEmpty) {
+      await _addAddress();
+      return;
+    }
+    final picked = await showAddressPickerSheet(
       context: context,
-      initialDate: now.add(const Duration(days: 1)),
-      firstDate: now,
-      lastDate: now.add(const Duration(days: 365)),
+      addresses: _addresses,
+      selectedId: _selectedAddressId,
+      onAddAddress: _addAddress,
     );
-    if (picked != null) setState(() => _scheduledDate = picked);
+    if (picked != null && mounted) {
+      setState(() => _selectedAddressId = picked.id);
+    }
   }
 
   Future<void> _addAddress() async {
@@ -134,56 +137,58 @@ class _ServiceBookingScreenState extends State<ServiceBookingScreen> {
     await _load();
   }
 
-  Future<void> _validateCoupon() async {
-    final code = _couponController.text.trim();
-    if (code.isEmpty) {
-      AppFunctions.showsToast(
-        'mosaedCouponRequired'.tr(),
-        MosaedColors.danger,
-        context,
-      );
+  void _goToStep(int step) {
+    setState(() => _currentStep = step);
+    _pageController.animateToPage(
+      step,
+      duration: const Duration(milliseconds: 280),
+      curve: Curves.easeInOut,
+    );
+  }
+
+  void _onPrimary() {
+    if (_currentStep == 0) {
+      if (!_canContinueSchedule) {
+        AppFunctions.showsToast(
+          LocaleKeys.mosaedSelectPreferredDay.tr(),
+          MosaedColors.danger,
+          context,
+        );
+        return;
+      }
+      _goToStep(1);
       return;
     }
+    _submit();
+  }
 
-    setState(() => _validatingCoupon = true);
-    try {
-      // Price is set later on dashboard — validate coupon without area/total calc.
-      final result = await context.read<ServicesRepository>().validateCoupon(
-            code: code,
-            serviceId: widget.serviceId,
-            totalCost: 0,
-          );
-      if (!mounted) return;
-      setState(() {
-        _appliedCoupon = result;
-        _validatingCoupon = false;
-      });
-      AppFunctions.showsToast(
-        result.message ?? 'mosaedCouponApplied'.tr(),
-        MosaedColors.success,
-        context,
-      );
-    } on ServerFailure catch (e) {
-      if (mounted) {
-        setState(() {
-          _appliedCoupon = null;
-          _validatingCoupon = false;
-        });
-        AppFunctions.showsToast(e.errMessage, MosaedColors.danger, context);
-      }
+  void _onPrevious() {
+    if (_currentStep > 0) _goToStep(_currentStep - 1);
+  }
+
+  String _scheduleNotes() {
+    if (_scheduledDate == null || _scheduledTime == null) return '';
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final diff = _scheduledDate!.difference(today).inDays;
+    String dayLabel;
+    if (diff == 0) {
+      dayLabel = LocaleKeys.mosaedToday.tr();
+    } else if (diff == 1) {
+      dayLabel = LocaleKeys.mosaedTomorrow.tr();
+    } else {
+      dayLabel = DateFormat('EEEE').format(_scheduledDate!);
     }
+    final hour = _scheduledTime!.hourOfPeriod == 0
+        ? 12
+        : _scheduledTime!.hourOfPeriod;
+    final period = _scheduledTime!.period == DayPeriod.am ? 'ص' : 'م';
+    final mm = _scheduledTime!.minute.toString().padLeft(2, '0');
+    return '${LocaleKeys.mosaedAppointment.tr()}: $dayLabel • ${DateFormat('d MMMM').format(_scheduledDate!)} • ${hour.toString().padLeft(2, '0')}:$mm $period';
   }
 
   Future<void> _submit() async {
-    if (_scheduledDate == null) {
-      AppFunctions.showsToast(
-        'mosaedSelectDate'.tr(),
-        MosaedColors.danger,
-        context,
-      );
-      return;
-    }
-    if (_selectedAddress == null) {
+    if (_scheduledDate == null || _selectedAddress == null) {
       AppFunctions.showsToast(
         'mosaedAddressRequired'.tr(),
         MosaedColors.danger,
@@ -203,22 +208,16 @@ class _ServiceBookingScreenState extends State<ServiceBookingScreen> {
         );
         return;
       }
-      // Area/quantity is no longer collected — dashboard sets pricing later.
-      items.add(
-        BookingItemPayload(attributeId: _selectedAttributeId!),
-      );
+      items.add(BookingItemPayload(attributeId: _selectedAttributeId!));
     }
 
     setState(() => _submitting = true);
     try {
-      final couponCode =
-          _appliedCoupon != null ? _couponController.text.trim() : '';
       final result = await context.read<ServicesRepository>().createBooking(
             CreateBookingPayload(
               serviceId: widget.serviceId,
               scheduledDate: DateFormat('yyyy-MM-dd').format(_scheduledDate!),
-              notes: _notesController.text.trim(),
-              couponCode: couponCode,
+              notes: _scheduleNotes(),
               addressId: _selectedAddress!.id,
               items: items,
             ),
@@ -239,341 +238,60 @@ class _ServiceBookingScreenState extends State<ServiceBookingScreen> {
     }
   }
 
-  Widget _sectionTitle(String title) {
-    return Text(
-      title,
-      style: getBoldStyle(fontSize: 17.sp, color: MosaedColors.textPrimary),
-    );
-  }
+  String get _primaryButtonText => _currentStep == 0
+      ? LocaleKeys.mosaedContinue.tr()
+      : 'mosaedConfirmRequest'.tr();
 
-  Widget _surfaceCard({required Widget child}) {
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.all(16.w),
-      decoration: BoxDecoration(
-        color: MosaedColors.surfaceWhite,
-        borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: MosaedColors.outlineVariant),
-        boxShadow: MosaedColors.softShadow,
-      ),
-      child: child,
-    );
-  }
-
-  Widget _pricePendingBanner() {
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.all(14.w),
-      decoration: BoxDecoration(
-        color: MosaedColors.shieldBg,
-        borderRadius: BorderRadius.circular(14.r),
-        border: Border.all(color: MosaedColors.border),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            Icons.info_outline_rounded,
-            color: MosaedColors.primary,
-            size: 22.sp,
-          ),
-          SizedBox(width: 10.w),
-          Expanded(
-            child: Text(
-              'mosaedPriceSetByDashboard'.tr(),
-              style: getMediumStyle(
-                fontSize: 13.sp,
-                color: MosaedColors.textPrimary,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
+  bool get _primaryEnabled {
+    if (_currentStep == 0) return _canContinueSchedule;
+    return _canConfirm;
   }
 
   @override
   Widget build(BuildContext context) {
     if (_loading) {
       return Scaffold(
-        backgroundColor: MosaedColors.background,
+        backgroundColor: MosaedColors.surfaceWhite,
         appBar: _bookingAppBar(),
         body: const Center(
-          child: CircularProgressIndicator(color: MosaedColors.primaryContainer),
+          child: CircularProgressIndicator(color: MosaedColors.brand),
         ),
       );
     }
 
-    final detail = _detail!;
-    final selectedAddress = _selectedAddress;
-
     return Scaffold(
-      backgroundColor: MosaedColors.background,
+      backgroundColor: MosaedColors.surfaceWhite,
       appBar: _bookingAppBar(),
       body: Column(
         children: [
-          Expanded(
-            child: SingleChildScrollView(
-              padding: EdgeInsets.fromLTRB(20.w, 8.h, 20.w, 24.h),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _sectionTitle('mosaedSelectAppointment'.tr()),
-                  SizedBox(height: 10.h),
-                  InkWell(
-                    onTap: _pickDate,
-                    borderRadius: BorderRadius.circular(12.r),
-                    child: _surfaceCard(
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            _scheduledDate == null
-                                ? 'mosaedSelectDate'.tr()
-                                : DateFormat('dd-MM-yyyy')
-                                    .format(_scheduledDate!),
-                            style: getRegularStyle(
-                              fontSize: 15.sp,
-                              color: _scheduledDate == null
-                                  ? MosaedColors.textSecondary
-                                  : MosaedColors.textPrimary,
-                            ),
-                          ),
-                          Icon(
-                            Icons.calendar_today_rounded,
-                            color: MosaedColors.primary,
-                            size: 22.sp,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 20.h),
-                  _sectionTitle('mosaedSelectAddress'.tr()),
-                  SizedBox(height: 10.h),
-                  _surfaceCard(
-                    child: Column(
-                      children: [
-                        MosaedDropdown<String>(
-                          title: '',
-                          hint: 'mosaedSelectAddress'.tr(),
-                          icon: Icons.location_on_outlined,
-                          selectedValue: _selectedAddressId,
-                          items: _addresses
-                              .map(
-                                (a) => MosaedDropdownItem(
-                                  value: a.id,
-                                  label: a.fullAddress,
-                                ),
-                              )
-                              .toList(),
-                          onSelected: (value) =>
-                              setState(() => _selectedAddressId = value),
-                        ),
-                        if (selectedAddress != null) ...[
-                          SizedBox(height: 8.h),
-                          Align(
-                            alignment: AlignmentDirectional.centerStart,
-                            child: Text(
-                              selectedAddress.fullAddress,
-                              style: getRegularStyle(
-                                fontSize: 12.sp,
-                                color: MosaedColors.textSecondary,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  TextButton.icon(
-                    onPressed: _addAddress,
-                    icon: Icon(
-                      Icons.add_circle_outline,
-                      color: MosaedColors.primary,
-                    ),
-                    label: Text(
-                      'mosaedAddAddress'.tr(),
-                      style: getBoldStyle(
-                        fontSize: 13.sp,
-                        color: MosaedColors.primary,
-                      ),
-                    ),
-                  ),
-                  if (detail.attributes.isNotEmpty) ...[
-                    SizedBox(height: 8.h),
-                    _sectionTitle('mosaedServiceAttributes'.tr()),
-                    SizedBox(height: 10.h),
-                    _surfaceCard(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          MosaedDropdown<String>(
-                            title: '',
-                            hint: 'mosaedSelectAttribute'.tr(),
-                            icon: Icons.tune_rounded,
-                            selectedValue: _selectedAttributeId,
-                            items: detail.attributes
-                                .map(
-                                  (attr) => MosaedDropdownItem(
-                                    value: attr.id,
-                                    label: attr.name,
-                                  ),
-                                )
-                                .toList(),
-                            onSelected: (value) => setState(() {
-                              _selectedAttributeId = value;
-                              _appliedCoupon = null;
-                            }),
-                          ),
-                          if (_selectedAttribute?.details
-                                  ?.trim()
-                                  .isNotEmpty ==
-                              true) ...[
-                            SizedBox(height: 10.h),
-                            Text(
-                              _selectedAttribute!.details!,
-                              style: getRegularStyle(
-                                fontSize: 13.sp,
-                                color: MosaedColors.textSecondary,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ],
-                  SizedBox(height: 16.h),
-                  _pricePendingBanner(),
-                  SizedBox(height: 20.h),
-                  _sectionTitle('mosaedCouponOptional'.tr()),
-                  SizedBox(height: 10.h),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _couponController,
-                          onChanged: (_) =>
-                              setState(() => _appliedCoupon = null),
-                          textAlign: TextAlign.right,
-                          decoration: InputDecoration(
-                            hintText: 'mosaedCouponHint'.tr(),
-                            filled: true,
-                            fillColor: MosaedColors.surfaceWhite,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12.r),
-                              borderSide: BorderSide(
-                                color: MosaedColors.outlineVariant,
-                              ),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12.r),
-                              borderSide: BorderSide(
-                                color: MosaedColors.outlineVariant,
-                              ),
-                            ),
-                            suffixIcon: _appliedCoupon != null
-                                ? Icon(
-                                    Icons.check_circle,
-                                    color: MosaedColors.success,
-                                  )
-                                : null,
-                          ),
-                        ),
-                      ),
-                      SizedBox(width: 10.w),
-                      ElevatedButton(
-                        onPressed: _validatingCoupon ? null : _validateCoupon,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: MosaedColors.primaryContainer,
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 20.w,
-                            vertical: 16.h,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12.r),
-                          ),
-                          elevation: 2,
-                        ),
-                        child: _validatingCoupon
-                            ? SizedBox(
-                                width: 20.w,
-                                height: 20.w,
-                                child: const CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              )
-                            : Text(
-                                'mosaedApplyCoupon'.tr(),
-                                style: getBoldStyle(
-                                  fontSize: 13.sp,
-                                  color: Colors.white,
-                                ),
-                              ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 20.h),
-                  _sectionTitle('notesOptional'.tr()),
-                  SizedBox(height: 10.h),
-                  TextField(
-                    controller: _notesController,
-                    maxLines: 4,
-                    textAlign: TextAlign.right,
-                    decoration: InputDecoration(
-                      hintText: 'notesHint'.tr(),
-                      filled: true,
-                      fillColor: MosaedColors.surfaceWhite,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12.r),
-                        borderSide: BorderSide(
-                          color: MosaedColors.outlineVariant,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          CustomRequestProgressBar(
+            currentStep: _currentStep,
+            totalSteps: _stepCount,
           ),
-          Container(
-            padding: EdgeInsets.fromLTRB(20.w, 12.h, 20.w, 16.h),
-            decoration: BoxDecoration(
-              color: MosaedColors.surfaceWhite,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 20,
-                  offset: const Offset(0, -4),
+          Expanded(
+            child: PageView(
+              controller: _pageController,
+              physics: const NeverScrollableScrollPhysics(),
+              children: [
+                StepSchedule(
+                  selectedDate: _scheduledDate,
+                  selectedTime: _scheduledTime,
+                  onDateSelected: (d) => setState(() => _scheduledDate = d),
+                  onTimeSelected: (t) => setState(() => _scheduledTime = t),
+                ),
+                StepLocation(
+                  address: _selectedAddress,
+                  onChangeLocation: _changeLocation,
                 ),
               ],
             ),
-            child: SafeArea(
-              top: false,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'mosaedTermsAgree'.tr(),
-                    textAlign: TextAlign.center,
-                    style: getRegularStyle(
-                      fontSize: 11.sp,
-                      color: MosaedColors.onSurfaceVariant,
-                    ),
-                  ),
-                  SizedBox(height: 10.h),
-                  SizedBox(
-                    width: double.infinity,
-                    child: MosaedPrimaryButton(
-                      text: 'mosaedConfirmRequest'.tr(),
-                      icon: Icons.check_rounded,
-                      isLoading: _submitting,
-                      onPressed: _submit,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          ),
+          CustomRequestBottomBar(
+            primaryText: _primaryButtonText,
+            onPrimary: _primaryEnabled && !_submitting ? _onPrimary : null,
+            showPrevious: _currentStep > 0,
+            onPrevious: _onPrevious,
+            isLoading: _submitting,
           ),
         ],
       ),
@@ -586,37 +304,20 @@ class _ServiceBookingScreenState extends State<ServiceBookingScreen> {
       elevation: 0,
       shadowColor: Colors.black.withValues(alpha: 0.08),
       surfaceTintColor: Colors.transparent,
-      title: Row(
-        children: [
-          Text(
-            'mosaedAppName'.tr(),
-            style: getBoldStyle(
-              fontSize: 18.sp,
-              color: MosaedColors.primary,
-            ),
-          ),
-          SizedBox(width: 8.w),
-          Container(
-            width: 36.w,
-            height: 36.w,
-            decoration: BoxDecoration(
-              color: MosaedColors.primaryContainer,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.home_repair_service_rounded,
-              color: Colors.white,
-              size: 20.sp,
-            ),
-          ),
-        ],
+      centerTitle: true,
+      title: Text(
+        'mosaedRequestService'.tr(),
+        style: getBoldStyle(
+          fontSize: 16.sp,
+          color: MosaedColors.textPrimary,
+        ),
       ),
       leading: IconButton(
         onPressed: () => Navigator.pop(context),
         icon: Icon(
-          Icons.chevron_right_rounded,
+          Icons.arrow_back_ios_new_rounded,
           color: MosaedColors.textPrimary,
-          size: 28.sp,
+          size: 18.sp,
         ),
       ),
     );

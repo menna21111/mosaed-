@@ -7,6 +7,8 @@ import '../app/theme_cubit.dart/theme_cubit.dart';
 import '../features/auth/presentation/login_screen.dart';
 import '../features/splash/presentation/splash_screen.dart';
 
+
+
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 class MyApp extends StatefulWidget {
@@ -22,7 +24,7 @@ class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     return ScreenUtilInit(
-      designSize: const Size(360, 690),
+      designSize: const Size(440, 956),
       minTextAdapt: true,
       splitScreenMode: true,
       builder: (context, child) {
@@ -30,6 +32,7 @@ class _MyAppState extends State<MyApp> {
           builder: (context, themeState) {
             return MaterialApp(
               navigatorKey: navigatorKey,
+              title: 'مساعد',
               localizationsDelegates: context.localizationDelegates,
               supportedLocales: context.supportedLocales,
               locale: context.locale,

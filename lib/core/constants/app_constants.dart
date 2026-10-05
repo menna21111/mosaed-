@@ -1,6 +1,6 @@
 class AppConstants {
   /// غيّر الـ base URL حسب الـ API الخاص بك
-  static const String baseUrl = 'https://mosaed-production.up.railway.app';
+  static const String baseUrl = 'https://api.mosa3ed.net';
   static const String appVersion = '2.4.1';
   static const String userType = 'customer';
   static const String otpSend = '/api/accounts/otp/send/';
@@ -34,6 +34,8 @@ class AppConstants {
       '/api/custom_services/custom-requests/$requestId/offers/';
   static String acceptCustomOffer(String requestId, String offerId) =>
       '/api/custom_services/custom-requests/$requestId/offers/$offerId/accept/';
+  static String rejectCustomOffer(String requestId, String offerId) =>
+      '/api/custom_services/custom-requests/$requestId/offers/$offerId/reject/';
   static String customRequestProviderArrived(String requestId) =>
       '/api/custom_services/custom-requests/$requestId/provider-arrived/';
   static String bookingProviderArrived(String bookingId) =>
@@ -47,6 +49,8 @@ class AppConstants {
       '/api/custom_services/custom-requests/$requestId/chat/';
   static String customRequestChatRead(String requestId) =>
       '/api/custom_services/custom-requests/$requestId/chat/read/';
+  static const String customRequestConversations =
+      '/api/custom_services/custom-requests/conversations/';
 
   // ── Payments (customer) — Base: /api/payments/ ─────────────────────
   /// Direct payment request detail.
@@ -125,8 +129,9 @@ class AppConstants {
       'https://res.cloudinary.com/dftpzis0y/image/upload/v1782039707/services/erfger_ktaiib.png';
 
   static const String customerAddresses = '/api/accounts/customer/addresses/';
-  static String deleteAddress(String id) =>
+  static String customerAddress(String id) =>
       '/api/accounts/customer/addresses/$id/';
+  static String deleteAddress(String id) => customerAddress(id);
   static const String cities = '/api/accounts/cities/';
   static const String regions = '/api/accounts/regions';
 
@@ -145,6 +150,11 @@ class AppConstants {
   static const String isLoggedInKey = 'is_logged_in';
   static const String onboardingSeenKey = 'onboarding_seen';
   static const String locationSetupDoneKey = 'location_setup_done';
+  static const String notifMessagesKey = 'notif_messages';
+  static const String notifOffersKey = 'notif_offers';
+  static const String notifOrderStatusKey = 'notif_order_status';
+  static const String notifTechnicianKey = 'notif_technician';
+  static const String notifPaymentKey = 'notif_payment';
   static const String userCityKey = 'user_city';
   static const String userDistrictKey = 'user_district';
   static const String userStreetKey = 'user_street';
